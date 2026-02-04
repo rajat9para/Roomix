@@ -1,0 +1,133 @@
+Roomix - Android Studio Build and Run Guide
+
+This guide covers a clean Android Studio build for the Roomix Flutter app,
+including setup, build steps, and troubleshooting.
+
+---
+Prerequisites
+1. Flutter SDK (3.8.1 or newer) installed and on PATH.
+2. Android Studio (latest) with:
+   - Android SDK
+   - Android SDK Platform-Tools
+   - Android SDK Build-Tools
+   - Android Emulator
+3. JDK 11 or 17 installed (required for Gradle builds).
+4. Node.js (18+ recommended) for the backend.
+
+---
+Project Setup (One Time)
+1. Open Android Studio.
+2. Open the project folder:
+   - c:\Users\ASUS\OneDrive\Desktop\PG_FINER_APP\roomix
+3. Let Android Studio finish Gradle sync.
+4. Open a terminal in the project root and run:
+   - flutter pub get
+5. Accept Android SDK licenses (one time):
+   - flutter doctor --android-licenses
+6. Verify toolchain status:
+   - flutter doctor
+
+---
+Backend Setup (Required for API)
+1. Open a terminal:
+   - cd backend
+2. Install dependencies:
+   - npm install
+3. Create a .env file in backend\ with:
+   - MONGO_URI=your_mongo_uri
+   - JWT_SECRET=your_secret
+   - CLOUDINARY_CLOUD_NAME=...
+   - CLOUDINARY_API_KEY=...
+   - CLOUDINARY_API_SECRET=...
+   - MAIL_USER=...
+   - MAIL_PASS=...
+4. Start backend:
+   - npm start
+5. Default API is:
+   - http://localhost:5000/api
+6. If you only want to build the APK UI, backend can be skipped.
+
+---
+Android Emulator Networking (Important)
+If using Android Emulator, update base URL in:
+  lib\services\api_service.dart
+
+Use:
+  http://10.0.2.2:5000/api
+
+If using a real device, use your PC local IP:
+  http://YOUR_IP:5000/api
+
+---
+TomTom Maps Setup (Already configured)
+The TomTom API key is used in:
+  - lib/services/map_service.dart
+  - android/app/src/main/AndroidManifest.xml
+  - ios/Runner/Info.plist
+
+Map rendering uses TomTom Static Map API for reliability.
+
+---
+Build and Run (Android Studio)
+1. Open Device Manager and start an emulator (or connect a device).
+2. In Android Studio, select the device.
+3. Run:
+   - flutter run
+
+Release build (APK / AAB):
+  - flutter build apk --release
+  - flutter build appbundle --release
+
+Release signing (Play Store):
+  - Create a keystore and configure `android/key.properties`
+  - Update `android/app/build.gradle.kts` signingConfig for release
+  - Then run `flutter build appbundle --release`
+
+---
+Troubleshooting
+
+1. Gradle Sync Failed
+   - File > Settings > Build, Execution, Deployment > Gradle
+   - Ensure Gradle JDK is set to a valid JDK (11 or 17).
+   - Run: flutter clean
+   - Run: flutter pub get
+
+2. Flutter SDK Not Found
+   - File > Settings > Languages & Frameworks > Flutter
+   - Set Flutter SDK path.
+   - Also set the Dart SDK path (usually auto-detected).
+
+3. TomTom Map Not Loading
+   - Check internet access on emulator/device.
+   - Verify API key in:
+     lib/services/map_service.dart
+   - Verify app has INTERNET permission in:
+     android/app/src/main/AndroidManifest.xml
+
+4. API Calls Fail
+   - Ensure backend is running.
+   - Confirm base URL in lib/services/api_service.dart
+   - On emulator, use 10.0.2.2 instead of localhost.
+
+5. Firebase Issues
+   - Ensure android/app/google-services.json exists.
+   - Run Gradle sync again.
+   - If auth crashes on launch, re-run: flutter pub get
+
+6. Build Hangs / Cache Issues
+   - flutter clean
+   - flutter pub get
+   - Restart Android Studio
+
+7. JDK Issues
+   - File > Settings > Build, Execution, Deployment > Gradle
+   - Set Gradle JDK to 11 or 17
+   - Re-sync Gradle
+
+---
+Verification Checklist
+- App launches on emulator/device
+- Login and signup work
+- API calls return data
+- Map screen loads TomTom static map
+- No build errors in Android Studio
