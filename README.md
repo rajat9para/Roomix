@@ -1,4 +1,4 @@
-# Roomix (PG Finer App)
+# Roomix (PG Finder App)
 
 Roomix is a Flutter + Node.js application that helps students find PGs/rooms, messes, utilities, events, and roommates around campus. It includes authentication, profiles, marketplace, lost & found, chat, and a campus map experience powered by TomTom static maps.
 
