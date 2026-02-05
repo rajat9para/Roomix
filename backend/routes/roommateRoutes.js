@@ -5,7 +5,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const router = express.Router();
 
 // Protect all routes with auth middleware
-router.use(authMiddleware);
+router.use(authMiddleware.protect);
 
 // Create or update profile
 router.post('/profile', roommateController.createProfile);
