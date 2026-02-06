@@ -91,7 +91,7 @@ class _MessScreenState extends State<MessScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Mess Menu',
+          'Mess',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,

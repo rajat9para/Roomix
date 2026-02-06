@@ -37,6 +37,7 @@ class RoommateProvider extends ChangeNotifier {
     String bio,
     List<String> interests,
     Map<String, dynamic> preferences,
+    {String? gender, String? courseYear, String? college}
   ) async {
     try {
       _isLoading = true;
@@ -49,6 +50,9 @@ class RoommateProvider extends ChangeNotifier {
           'bio': bio,
           'interests': interests,
           'preferences': preferences,
+          'gender': gender,
+          'courseYear': courseYear,
+          'college': college,
         },
       );
 

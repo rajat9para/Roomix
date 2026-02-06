@@ -1,8 +1,8 @@
 const express = require('express');
 const { getRooms, createRoom } = require('../controllers/roomController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, requireRole } = require('../middleware/authMiddleware');
 const router = express.Router();
 
-router.route('/').get(getRooms).post(protect, createRoom);
+router.route('/').get(getRooms).post(protect, requireRole('owner', 'admin'), createRoom);
 
 module.exports = router;

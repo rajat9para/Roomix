@@ -17,6 +17,10 @@ class RoommateFinderScreen extends StatefulWidget {
 
 class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
   int _selectedTabIndex = 0;
+  String _filterGender = 'All';
+  String _filterYear = 'All';
+  String _filterCollege = '';
+  String _sortBy = 'Best Match';
 
   @override
   void initState() {
@@ -33,7 +37,7 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Room-Partner Finder'),
+        title: const Text('Find Room Partner'),
         centerTitle: true,
         backgroundColor: AppColors.primary,
         elevation: 0,
@@ -244,7 +248,9 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
   }
 
   Widget _buildMatchesTab(BuildContext context, RoommateProvider provider) {
-    if (provider.matches.isEmpty) {
+    final filtered = _applyFilters(provider.matches);
+
+    if (filtered.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -267,13 +273,128 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: provider.matches.length,
-      itemBuilder: (context, index) {
-        final match = provider.matches[index];
-        return _buildMatchCard(context, match, provider);
-      },
+    return Column(
+      children: [
+        _buildFilterBar(),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: filtered.length,
+            itemBuilder: (context, index) {
+              final match = filtered[index];
+              return _buildMatchCard(context, match, provider);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<RoommateProfile> _applyFilters(List<RoommateProfile> matches) {
+    var filtered = matches.toList();
+    if (_filterGender != 'All') {
+      filtered = filtered
+          .where((m) => m.gender.toLowerCase() == _filterGender.toLowerCase())
+          .toList();
+    }
+    if (_filterYear != 'All') {
+      filtered = filtered.where((m) => m.courseYear == _filterYear).toList();
+    }
+    if (_filterCollege.isNotEmpty) {
+      filtered = filtered
+          .where((m) =>
+              m.college.toLowerCase().contains(_filterCollege.toLowerCase()))
+          .toList();
+    }
+
+    switch (_sortBy) {
+      case 'Year':
+        filtered.sort((a, b) => a.courseYear.compareTo(b.courseYear));
+        break;
+      case 'College':
+        filtered.sort((a, b) => a.college.compareTo(b.college));
+        break;
+      case 'Best Match':
+      default:
+        filtered.sort((a, b) => (b.compatibility ?? 0).compareTo(a.compatibility ?? 0));
+        break;
+    }
+    return filtered;
+  }
+
+  Widget _buildFilterBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        border: Border(
+          bottom: BorderSide(color: AppColors.border, width: 1),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(child: _buildDropdown(_filterGender, ['All', 'girls', 'boys', 'other'], (v) {
+                setState(() => _filterGender = v);
+              })),
+              const SizedBox(width: 8),
+              Expanded(child: _buildDropdown(_filterYear, ['All', '1st Year', '2nd Year', '3rd Year', '4th Year', 'PG / Masters'], (v) {
+                setState(() => _filterYear = v);
+              })),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Filter by college',
+                    prefixIcon: const Icon(Icons.school_rounded, size: 18),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onChanged: (val) => setState(() => _filterCollege = val),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 130,
+                child: _buildDropdown(_sortBy, ['Best Match', 'Year', 'College'], (v) {
+                  setState(() => _sortBy = v);
+                }),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdown(String value, List<String> options, ValueChanged<String> onChanged) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          items: options.map((opt) => DropdownMenuItem(value: opt, child: Text(opt))).toList(),
+          onChanged: (val) {
+            if (val != null) onChanged(val);
+          },
+        ),
+      ),
     );
   }
 
@@ -282,7 +403,7 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
     RoommateProfile match,
     RoommateProvider provider,
   ) {
-    final compatibility = _calculateCompatibility(match, provider.myProfile);
+    final compatibility = match.compatibility ?? _calculateCompatibility(match, provider.myProfile);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,

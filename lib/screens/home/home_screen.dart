@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:roomix/providers/auth_provider.dart';
+import 'package:roomix/providers/user_preferences_provider.dart';
+import 'package:roomix/providers/map_provider.dart';
 import 'package:roomix/screens/auth/login_screen.dart';
 import 'package:roomix/screens/rooms/room_screen.dart';
 import 'package:roomix/screens/mess/mess_screen.dart';
@@ -11,12 +13,20 @@ import 'package:roomix/screens/events/events_screen.dart';
 import 'package:roomix/screens/market/market_screen.dart';
 import 'package:roomix/screens/utilities/utilities_screen.dart';
 import 'package:roomix/screens/map/campus_map_screen.dart';
+import 'package:roomix/screens/roommate_finder/roommate_finder_screen.dart';
 import 'package:roomix/screens/profile/profile_screen.dart';
 import 'package:roomix/screens/settings/settings_screen.dart';
+import 'package:roomix/screens/admin/admin_dashboard_screen.dart';
 import 'package:roomix/constants/app_colors.dart';
 import 'package:roomix/widgets/module_card.dart';
 import 'package:roomix/models/user_model.dart';
 import 'package:roomix/utils/smooth_navigation.dart';
+import 'package:roomix/services/map_service.dart';
+import 'package:roomix/services/api_service.dart';
+import 'package:roomix/models/map_marker_model.dart';
+import 'package:roomix/models/room_model.dart';
+import 'package:roomix/models/mess_model.dart';
+import 'package:roomix/models/utility_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,6 +39,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   bool _isLoading = true;
+  bool _statsLoading = true;
+  int _studentsCount = 0;
+  int _pgOwnersCount = 0;
+  int _messOwnersCount = 0;
+  List<dynamic> _notifications = [];
 
   @override
   void initState() {
@@ -48,6 +63,127 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         setState(() => _isLoading = false);
       }
     });
+
+    _loadDashboardStats();
+    _loadNotifications();
+    _applyCampusCenter();
+    _loadMapMarkers();
+  }
+
+  Future<void> _applyCampusCenter() async {
+    final prefs = context.read<UserPreferencesProvider>();
+    if (prefs.isLoading) {
+      await prefs.loadUserPreferences();
+    }
+    final lat = prefs.campusLat;
+    final lng = prefs.campusLng;
+    if (lat != null && lng != null) {
+      context.read<MapProvider>().updateMapView(lat, lng, 15);
+    }
+  }
+
+  Future<void> _loadDashboardStats() async {
+    try {
+      final stats = await ApiService.getDashboardStats();
+      setState(() {
+        _studentsCount = (stats['students'] as num?)?.toInt() ?? 0;
+        _pgOwnersCount = (stats['pgOwners'] as num?)?.toInt() ?? 0;
+        _messOwnersCount = (stats['messOwners'] as num?)?.toInt() ?? 0;
+        _statsLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _studentsCount = 0;
+        _pgOwnersCount = 0;
+        _messOwnersCount = 0;
+        _statsLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadNotifications() async {
+    try {
+      final response = await ApiService.getNotifications();
+      setState(() {
+        _notifications = (response['notifications'] as List?) ?? [];
+      });
+    } catch (e) {
+      setState(() {
+        _notifications = [];
+      });
+    }
+  }
+
+  Future<void> _loadMapMarkers() async {
+    try {
+      final mapProvider = context.read<MapProvider>();
+      mapProvider.clearMarkers();
+
+      final roomsJson = await ApiService.getRooms();
+      final roomMarkers = roomsJson
+          .map((r) => RoomModel.fromJson(r))
+          .where((r) => r.latitude != null && r.longitude != null)
+          .map((room) => MapMarkerModel(
+                id: room.id,
+                title: room.title,
+                description: room.location,
+                latitude: room.latitude!,
+                longitude: room.longitude!,
+                category: MarkerCategory.pg,
+                imageUrl: room.image,
+                address: room.location,
+                metadata: room,
+              ))
+          .toList();
+
+      final messResponse = await ApiService.getMessMenu();
+      final messJson = messResponse['mess'] as List? ?? [];
+      final messMarkers = messJson
+          .map((m) => MessModel.fromJson(m))
+          .where((m) => m.latitude != null && m.longitude != null)
+          .map((mess) => MapMarkerModel(
+                id: mess.id,
+                title: mess.name,
+                description: mess.specialization ?? 'Mess',
+                latitude: mess.latitude!,
+                longitude: mess.longitude!,
+                category: MarkerCategory.mess,
+                imageUrl: mess.image,
+                address: mess.address,
+                metadata: mess,
+              ))
+          .toList();
+
+      final prefs = context.read<UserPreferencesProvider>();
+      List<UtilityModel> utilities = [];
+      try {
+        if (prefs.campusLat != null && prefs.campusLng != null) {
+          utilities = await ApiService.getUtilitiesNearby(
+            prefs.campusLat!,
+            prefs.campusLng!,
+            radiusMeters: 8000,
+          );
+        } else {
+          utilities = await ApiService.getUtilities();
+        }
+      } catch (_) {}
+
+      final utilityMarkers = utilities
+          .map((utility) => MapMarkerModel(
+                id: utility.id,
+                title: utility.name,
+                description: utility.category,
+                latitude: utility.latitude,
+                longitude: utility.longitude,
+                category: MarkerCategory.utility,
+                imageUrl: utility.image,
+                address: utility.address,
+                metadata: utility,
+              ))
+          .toList();
+
+      mapProvider.addMarkers([...roomMarkers, ...messMarkers, ...utilityMarkers]);
+    } catch (_) {}
   }
 
   @override
@@ -85,8 +221,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         _isLoading ? _buildWelcomeSectionShimmer() : _buildWelcomeSection(user),
                         const SizedBox(height: 24),
 
+                        if (_notifications.isNotEmpty) ...[
+                          _buildNotificationBanner(),
+                          const SizedBox(height: 24),
+                        ],
+
                         // Stats Cards
-                        _isLoading ? _buildStatsRowShimmer() : _buildStatsRow(),
+                        (_isLoading || _statsLoading) ? _buildStatsRowShimmer() : _buildStatsRow(),
                         const SizedBox(height: 28),
 
                         // Quick Access Title
@@ -144,10 +285,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.home_work_rounded,
-                  color: Colors.white,
-                  size: 24,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    'assets/images/roomix_logo.png',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.home_work_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -298,6 +446,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ],
                 ),
                 const SizedBox(height: 24),
+
+                if (authProvider.currentUser?.role == 'admin') ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.admin_panel_settings, size: 20),
+                      label: const Text('Admin Dashboard'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.secondary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 
                 // Profile & Settings Buttons
                 SizedBox(
@@ -645,12 +818,46 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget _buildStatsRow() {
     return Row(
       children: [
-        Expanded(child: _buildStatCard('Rooms', '24', Icons.home_rounded)),
+        Expanded(child: _buildStatCard('Students', _studentsCount.toString(), Icons.school_rounded)),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard('Events', '8', Icons.event_rounded)),
+        Expanded(child: _buildStatCard('PG Owners', _pgOwnersCount.toString(), Icons.business_rounded)),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard('Items', '12', Icons.shopping_bag_rounded)),
+        Expanded(child: _buildStatCard('Mess Owners', _messOwnersCount.toString(), Icons.restaurant_rounded)),
       ],
+    );
+  }
+
+  Widget _buildNotificationBanner() {
+    final notification = _notifications.first;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.2)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.campaign_rounded, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  notification['message']?.toString() ?? 'New update available',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -709,37 +916,43 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final modules = [
       ModuleData(
         title: 'Rooms / PG',
-        icon: '🏠',
+        icon: Icons.home_work_rounded,
         route: () => const RoomScreen(),
         color: const Color(0xFF3B82F6),
       ),
       ModuleData(
-        title: 'Mess Menu',
-        icon: '🍛',
+        title: 'Mess',
+        icon: Icons.restaurant_rounded,
         route: () => const MessScreen(),
         color: const Color(0xFF10B981),
       ),
       ModuleData(
+        title: 'Find Room Partner',
+        icon: Icons.people_alt_rounded,
+        route: () => const RoommateFinderScreen(),
+        color: const Color(0xFF8B5CF6),
+      ),
+      ModuleData(
         title: 'Lost & Found',
-        icon: '🔍',
+        icon: Icons.search_rounded,
         route: () => const LostFoundScreen(),
         color: const Color(0xFFF59E0B),
       ),
       ModuleData(
         title: 'Events',
-        icon: '📅',
+        icon: Icons.event_rounded,
         route: () => const EventsScreen(),
         color: const Color(0xFF8B5CF6),
       ),
       ModuleData(
         title: 'Buy & Sell',
-        icon: '🛒',
+        icon: Icons.shopping_cart_rounded,
         route: () => const MarketScreen(),
         color: const Color(0xFFEC4899),
       ),
       ModuleData(
         title: 'Utilities',
-        icon: '🏥',
+        icon: Icons.miscellaneous_services_rounded,
         route: () => const UtilitiesScreen(),
         color: const Color(0xFF06B6D4),
       ),
@@ -806,9 +1019,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
+                      Icon(
                         module.icon,
-                        style: const TextStyle(fontSize: 32),
+                        size: 32,
+                        color: module.color,
                       ),
                       const SizedBox(height: 12),
                       Text(
@@ -850,7 +1064,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildCampusMapPreview(BuildContext context) {
-    final mapPreviewUrl = 'https://api.tomtom.com/map/1/staticimage?center=77.1855,28.5244&zoom=14&format=png&width=600&height=300&key=LQQ5FC01CqHB6TA6H1mL1aNjd9NWkfuZ';
+    final prefs = context.watch<UserPreferencesProvider>();
+    final centerLat = prefs.campusLat ?? 28.5244;
+    final centerLng = prefs.campusLng ?? 77.1855;
+    final mapProvider = context.watch<MapProvider>();
+    final markers = mapProvider.filteredMarkers.length > 10
+        ? mapProvider.filteredMarkers.take(10).toList()
+        : mapProvider.filteredMarkers;
+
+    final mapPreviewUrl = MapService.generateStaticMapUrl(
+      centerLat: centerLat,
+      centerLng: centerLng,
+      zoomLevel: 14,
+      width: 600,
+      height: 300,
+      markers: markers,
+    );
 
     return GestureDetector(
       onTap: () {
@@ -870,31 +1099,51 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 color: Colors.grey.shade800,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Image.network(
-                mapPreviewUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFF8B5CF6).withOpacity(0.2),
-                          const Color(0xFFEC4899).withOpacity(0.2),
-                        ],
+              child: mapPreviewUrl.isEmpty
+                  ? Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            const Color(0xFF8B5CF6).withOpacity(0.2),
+                            const Color(0xFFEC4899).withOpacity(0.2),
+                          ],
+                        ),
                       ),
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.map_rounded,
-                        color: Colors.white,
-                        size: 48,
+                      child: const Center(
+                        child: Icon(
+                          Icons.map_rounded,
+                          color: Colors.white,
+                          size: 48,
+                        ),
                       ),
+                    )
+                  : Image.network(
+                      mapPreviewUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                const Color(0xFF8B5CF6).withOpacity(0.2),
+                                const Color(0xFFEC4899).withOpacity(0.2),
+                              ],
+                            ),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.map_rounded,
+                              color: Colors.white,
+                              size: 48,
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
 
             // Gradient overlay

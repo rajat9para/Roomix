@@ -18,6 +18,7 @@ const roomSchema = mongoose.Schema({
         comment: { type: String },
         createdAt: { type: Date, default: Date.now }
     }],
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 }, {
     timestamps: true,
 });

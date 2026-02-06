@@ -37,7 +37,8 @@ const createRoom = async (req, res) => {
 
     try {
         const room = new Room({
-            title, location, price, type, image, contact, amenities
+            title, location, price, type, image, contact, amenities,
+            createdBy: req.user?._id ?? null,
         });
         const createdRoom = await room.save();
         res.status(201).json(createdRoom);

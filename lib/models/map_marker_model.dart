@@ -46,18 +46,18 @@ class MapMarkerModel {
     }
   }
 
-  String getCategoryIcon() {
+  IconData getCategoryIcon() {
     switch (category) {
       case MarkerCategory.pg:
-        return '🏠';
+        return Icons.home_work_rounded;
       case MarkerCategory.mess:
-        return '🍛';
+        return Icons.restaurant_rounded;
       case MarkerCategory.service:
-        return '🔧';
+        return Icons.build_rounded;
       case MarkerCategory.event:
-        return '📅';
+        return Icons.event_rounded;
       case MarkerCategory.utility:
-        return '🏥';
+        return Icons.miscellaneous_services_rounded;
     }
   }
 

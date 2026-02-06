@@ -5,6 +5,7 @@ import 'package:roomix/models/university_model.dart';
 import 'package:roomix/providers/user_preferences_provider.dart';
 import 'package:roomix/services/api_service.dart';
 import 'package:roomix/utils/smooth_navigation.dart';
+import 'package:roomix/screens/onboarding/student_onboarding_screen.dart';
 import 'package:roomix/screens/home/home_screen.dart';
 
 class UniversitySelectionScreen extends StatefulWidget {
@@ -106,14 +107,12 @@ class _UniversitySelectionScreenState extends State<UniversitySelectionScreen>
           context.read<UserPreferencesProvider>();
       await preferencesProvider.setSelectedUniversity(university);
 
-      if (widget.isOnboarding) {
-        await preferencesProvider.completeOnboarding();
-      }
-
       if (mounted) {
         SmoothNavigation.pushReplacement(
           context,
-          const HomeScreen(),
+          widget.isOnboarding
+              ? StudentOnboardingScreen(university: university)
+              : const HomeScreen(),
         );
       }
     } catch (e) {

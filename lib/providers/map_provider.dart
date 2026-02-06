@@ -101,6 +101,14 @@ class MapProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Set selected categories directly
+  void setCategories(Set<MarkerCategory> categories) {
+    _selectedCategories = categories;
+    _applyFilters();
+    _clusterMarkers();
+    notifyListeners();
+  }
+
   /// Search markers by title or description
   Future<void> searchMarkers(String query) async {
     if (query.isEmpty) {

@@ -54,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     try {
       final result = await authProvider.login(
         _emailController.text.trim(),
-        _passwordController.text,
+        _selectedRole == 'admin' ? '' : _passwordController.text,
         _selectedRole,
       );
 
@@ -222,10 +222,17 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               ),
             ],
           ),
-          child: const Icon(
-            Icons.home_work_rounded,
-            color: Colors.white,
-            size: 35,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.asset(
+              'assets/images/roomix_logo.png',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.home_work_rounded,
+                color: Colors.white,
+                size: 35,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 24),
@@ -339,7 +346,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               const SizedBox(height: 18),
 
               // Password Field (Hidden for OTP flow)
-              if (!_requiresOtp)
+              if (!_requiresOtp && _selectedRole != 'admin')
                 _buildPremiumTextField(
                   controller: _passwordController,
                   hintText: 'Enter your password',
@@ -390,7 +397,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   : (_requiresOtp ? _handleVerifyOtp : _handleLogin),
                 text: authProvider.isLoading
                   ? 'Please wait...'
-                  : (_requiresOtp ? 'Verify OTP' : 'Sign In'),
+                  : (_requiresOtp ? 'Verify OTP' : _selectedRole == 'admin' ? 'Send OTP' : 'Sign In'),
                 isLoading: authProvider.isLoading,
               ),
               const SizedBox(height: 18),

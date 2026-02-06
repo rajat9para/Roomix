@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:roomix/constants/app_colors.dart';
 import 'package:roomix/providers/roommate_provider.dart';
 import 'package:roomix/utils/smooth_navigation.dart';
+import 'package:roomix/providers/user_preferences_provider.dart';
 
 class ProfileCreationScreen extends StatefulWidget {
   final bool isEditing;
@@ -20,6 +21,9 @@ class _ProfileCreationScreenState extends State<ProfileCreationScreen> {
   late TextEditingController _bioController;
   late TextEditingController _minBudgetController;
   late TextEditingController _maxBudgetController;
+  late TextEditingController _collegeController;
+  String _selectedGender = 'girls';
+  String _selectedYear = '1st Year';
   final List<String> _selectedInterests = [];
   final List<String> _selectedLocations = [];
   final List<String> _selectedLifestyle = [];
@@ -57,12 +61,30 @@ class _ProfileCreationScreenState extends State<ProfileCreationScreen> {
     'Relaxed',
   ];
 
+  final List<String> genderOptions = ['girls', 'boys', 'other'];
+  final List<String> yearOptions = [
+    '1st Year',
+    '2nd Year',
+    '3rd Year',
+    '4th Year',
+    'PG / Masters',
+  ];
+
   @override
   void initState() {
     super.initState();
     _bioController = TextEditingController();
     _minBudgetController = TextEditingController(text: '5000');
     _maxBudgetController = TextEditingController(text: '50000');
+    _collegeController = TextEditingController();
+
+    final prefs = context.read<UserPreferencesProvider>();
+    if (prefs.studentCollege != null && prefs.studentCollege!.isNotEmpty) {
+      _collegeController.text = prefs.studentCollege!;
+    }
+    if (prefs.studentYear != null && prefs.studentYear!.isNotEmpty) {
+      _selectedYear = prefs.studentYear!;
+    }
 
     if (widget.isEditing) {
       final provider = context.read<RoommateProvider>();
@@ -75,6 +97,13 @@ class _ProfileCreationScreenState extends State<ProfileCreationScreen> {
         _selectedInterests.addAll(provider.myProfile!.interests);
         _selectedLocations.addAll(provider.myProfile!.preferences.location);
         _selectedLifestyle.addAll(provider.myProfile!.preferences.lifestyle);
+        _selectedGender = provider.myProfile!.gender;
+        _selectedYear = provider.myProfile!.courseYear.isNotEmpty
+            ? provider.myProfile!.courseYear
+            : _selectedYear;
+        if (provider.myProfile!.college.isNotEmpty) {
+          _collegeController.text = provider.myProfile!.college;
+        }
       }
     }
   }
@@ -84,6 +113,7 @@ class _ProfileCreationScreenState extends State<ProfileCreationScreen> {
     _bioController.dispose();
     _minBudgetController.dispose();
     _maxBudgetController.dispose();
+    _collegeController.dispose();
     super.dispose();
   }
 
@@ -101,6 +131,47 @@ class _ProfileCreationScreenState extends State<ProfileCreationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Basics
+            _buildSectionTitle('Basics'),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildDropdown(
+                    _selectedGender,
+                    genderOptions,
+                    (value) => setState(() => _selectedGender = value),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildDropdown(
+                    _selectedYear,
+                    yearOptions,
+                    (value) => setState(() => _selectedYear = value),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _collegeController,
+              decoration: InputDecoration(
+                hintText: 'College name',
+                filled: true,
+                fillColor: AppColors.background,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+              ),
+            ),
+            const SizedBox(height: 28),
+
             // Bio
             _buildSectionTitle('About You'),
             const SizedBox(height: 12),
@@ -346,6 +417,33 @@ class _ProfileCreationScreenState extends State<ProfileCreationScreen> {
     );
   }
 
+  Widget _buildDropdown(
+    String value,
+    List<String> options,
+    ValueChanged<String> onChanged,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          items: options
+              .map((opt) => DropdownMenuItem(value: opt, child: Text(opt)))
+              .toList(),
+          onChanged: (val) {
+            if (val != null) onChanged(val);
+          },
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleSaveProfile() async {
     if (_bioController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -381,6 +479,9 @@ class _ProfileCreationScreenState extends State<ProfileCreationScreen> {
               ? ['relaxed']
               : _selectedLifestyle.map((l) => l.toLowerCase().replaceAll(' ', '_')).toList(),
         },
+        gender: _selectedGender,
+        courseYear: _selectedYear,
+        college: _collegeController.text.trim(),
       );
 
       if (mounted) {

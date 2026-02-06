@@ -31,6 +31,9 @@ android {
         
         // Enable multidex for Firebase
         multiDexEnabled = true
+
+        // TomTom key from environment (used in AndroidManifest via manifestPlaceholders)
+        manifestPlaceholders["tomtomApiKey"] = System.getenv("TOMTOM_API_KEY") ?: ""
     }
 
     buildTypes {

@@ -19,6 +19,9 @@ const protect = async (req, res, next) => {
                 return res.status(401).json({ message: 'Token invalidated. Please login again.' });
             }
 
+            if (user?.isBlocked) {
+                return res.status(403).json({ message: 'Account blocked. Please contact support.' });
+            }
 
             req.user = user;
             next();
@@ -44,4 +47,12 @@ const admin = (req, res, next) => {
     }
 };
 
-module.exports = { protect, admin };
+const requireRole = (...roles) => (req, res, next) => {
+    if (req.user && roles.includes(req.user.role)) {
+        return next();
+    }
+    res.status(403);
+    throw new Error('Not authorized for this action');
+};
+
+module.exports = { protect, admin, requireRole };

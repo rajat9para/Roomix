@@ -4,7 +4,7 @@ const User = require('../models/User');
 // Create or update roommate profile
 exports.createProfile = async (req, res) => {
   try {
-    const { bio, interests, preferences } = req.body;
+    const { bio, interests, preferences, gender, courseYear, college } = req.body;
     const userId = req.user.id;
 
     let profile = await RoommateProfile.findOne({ user: userId });
@@ -14,12 +14,18 @@ exports.createProfile = async (req, res) => {
       profile.interests = interests || profile.interests;
       profile.preferences = preferences || profile.preferences;
       profile.profileComplete = true;
+      if (gender) profile.gender = gender;
+      if (courseYear) profile.courseYear = courseYear;
+      if (college) profile.college = college;
     } else {
       profile = new RoommateProfile({
         user: userId,
         bio,
         interests,
         preferences,
+        gender,
+        courseYear,
+        college,
         profileComplete: true,
       });
     }

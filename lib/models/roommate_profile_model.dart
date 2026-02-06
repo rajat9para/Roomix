@@ -6,9 +6,13 @@ class RoommateProfile {
   final String bio;
   final List<String> interests;
   final RoommatePreferences preferences;
+  final String gender;
+  final String courseYear;
+  final String college;
   final bool profileComplete;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int? compatibility;
 
   RoommateProfile({
     required this.id,
@@ -18,9 +22,13 @@ class RoommateProfile {
     required this.bio,
     required this.interests,
     required this.preferences,
+    required this.gender,
+    required this.courseYear,
+    required this.college,
     required this.profileComplete,
     required this.createdAt,
     required this.updatedAt,
+    this.compatibility,
   });
 
   factory RoommateProfile.fromJson(Map<String, dynamic> json) {
@@ -32,9 +40,13 @@ class RoommateProfile {
       bio: json['bio'] ?? '',
       interests: List<String>.from(json['interests'] ?? []),
       preferences: RoommatePreferences.fromJson(json['preferences'] ?? {}),
+      gender: json['gender'] ?? 'other',
+      courseYear: json['courseYear'] ?? '',
+      college: json['college'] ?? '',
       profileComplete: json['profileComplete'] ?? false,
       createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
       updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
+      compatibility: json['compatibility'],
     );
   }
 
@@ -47,9 +59,13 @@ class RoommateProfile {
       'bio': bio,
       'interests': interests,
       'preferences': preferences.toJson(),
+      'gender': gender,
+      'courseYear': courseYear,
+      'college': college,
       'profileComplete': profileComplete,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'compatibility': compatibility,
     };
   }
 }

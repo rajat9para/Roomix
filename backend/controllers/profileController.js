@@ -21,6 +21,14 @@ const getProfile = asyncHandler(async (req, res) => {
         notificationSettings: user.notificationSettings,
         privacySettings: user.privacySettings,
         selectedUniversity: user.selectedUniversity,
+        course: user.course,
+        year: user.year,
+        collegeName: user.collegeName,
+        contactNumber: user.contactNumber,
+        campusLatitude: user.campusLatitude,
+        campusLongitude: user.campusLongitude,
+        campusAddress: user.campusAddress,
+        isOnboardingComplete: user.isOnboardingComplete,
     });
 });
 
@@ -34,11 +42,33 @@ const updateProfile = asyncHandler(async (req, res) => {
         throw new Error('User not found');
     }
 
-    const { name, profilePicture, selectedUniversity } = req.body;
+    const {
+        name,
+        profilePicture,
+        selectedUniversity,
+        course,
+        year,
+        collegeName,
+        contactNumber,
+        campusLatitude,
+        campusLongitude,
+        campusAddress,
+        isOnboardingComplete,
+    } = req.body;
 
     if (name) user.name = name;
     if (typeof profilePicture === 'string') user.profilePicture = profilePicture;
     if (selectedUniversity) user.selectedUniversity = selectedUniversity;
+    if (course) user.course = course;
+    if (year) user.year = year;
+    if (collegeName) user.collegeName = collegeName;
+    if (contactNumber) user.contactNumber = contactNumber;
+    if (typeof campusLatitude === 'number') user.campusLatitude = campusLatitude;
+    if (typeof campusLongitude === 'number') user.campusLongitude = campusLongitude;
+    if (campusAddress) user.campusAddress = campusAddress;
+    if (typeof isOnboardingComplete === 'boolean') {
+        user.isOnboardingComplete = isOnboardingComplete;
+    }
 
     await user.save();
 

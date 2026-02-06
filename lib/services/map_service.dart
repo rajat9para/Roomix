@@ -3,8 +3,12 @@ import 'package:dio/dio.dart';
 import 'package:roomix/models/map_marker_model.dart';
 
 class MapService {
-  static const String tomtomApiKey = 'LQQ5FC01CqHB6TA6H1mL1aNjd9NWkfuZ';
+  // TomTom API key - use environment variable if set, otherwise use hardcoded key
+  static const String _envKey = String.fromEnvironment('TOMTOM_API_KEY');
+  static const String _fallbackKey = 'LQQ5FC01CqHB6TA6H1mL1aNjd9NWkfuZ';
+  static String get tomtomApiKey => _envKey.isNotEmpty ? _envKey : _fallbackKey;
   static const String tomtomBaseUrl = 'https://api.tomtom.com/map/1/staticimage';
+
 
   // Generate static map image URL with markers
   static String generateStaticMapUrl({
@@ -15,25 +19,45 @@ class MapService {
     required int height,
     List<MapMarkerModel>? markers,
   }) {
+    if (tomtomApiKey.isEmpty) {
+      return '';
+    }
     final buffer = StringBuffer('$tomtomBaseUrl?');
-    
+
     buffer.write('center=${centerLng.toStringAsFixed(6)},${centerLat.toStringAsFixed(6)}');
     buffer.write('&zoom=$zoomLevel');
     buffer.write('&format=png');
     buffer.write('&width=$width');
     buffer.write('&height=$height');
-    
-    // Add markers if provided
+
+    // Add markers if provided (single markers param with pipe-delimited coords)
     if (markers != null && markers.isNotEmpty) {
-      for (final marker in markers) {
-        final markerString = '${marker.longitude.toStringAsFixed(6)},${marker.latitude.toStringAsFixed(6)}';
-        buffer.write('&markers=style:s|lbl:${marker.category.name}|${markerString}');
-      }
+      final markerParts = markers
+          .map((marker) =>
+              '${marker.longitude.toStringAsFixed(6)},${marker.latitude.toStringAsFixed(6)}')
+          .toList();
+      final markerParam = Uri.encodeComponent(markerParts.join('|'));
+      buffer.write('&markers=$markerParam');
     }
-    
+
     buffer.write('&key=$tomtomApiKey');
-    
+
     return buffer.toString();
+  }
+
+  /// Lightweight preview URL without markers (faster and more reliable)
+  static String generatePreviewUrl({
+    required double centerLat,
+    required double centerLng,
+    int zoomLevel = 14,
+    int width = 600,
+    int height = 300,
+  }) {
+    if (tomtomApiKey.isEmpty) {
+      return '';
+    }
+    return '$tomtomBaseUrl?center=${centerLng.toStringAsFixed(6)},${centerLat.toStringAsFixed(6)}'
+        '&zoom=$zoomLevel&format=png&width=$width&height=$height&key=$tomtomApiKey';
   }
 
   // Search for locations by query
@@ -45,8 +69,9 @@ class MapService {
   }) async {
     try {
       final dio = Dio();
+      final encodedQuery = Uri.encodeComponent(query);
       final response = await dio.get(
-        'https://api.tomtom.com/search/2/search/$query.json',
+        'https://api.tomtom.com/search/2/search/$encodedQuery.json',
         queryParameters: {
           'key': tomtomApiKey,
           'lat': latitude,
@@ -99,8 +124,9 @@ class MapService {
   ) async {
     try {
       final dio = Dio();
+      final encodedAddress = Uri.encodeComponent(address);
       final response = await dio.get(
-        'https://api.tomtom.com/search/2/geocode/$address.json',
+        'https://api.tomtom.com/search/2/geocode/$encodedAddress.json',
         queryParameters: {
           'key': tomtomApiKey,
         },
@@ -111,8 +137,8 @@ class MapService {
         if (results.isNotEmpty) {
           final position = results[0]['position'] as Map<String, dynamic>;
           return {
-            'latitude': position['lat'] as double,
-            'longitude': position['lon'] as double,
+            'latitude': (position['lat'] as num).toDouble(),
+            'longitude': (position['lon'] as num).toDouble(),
           };
         }
       }

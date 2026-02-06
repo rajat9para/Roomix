@@ -43,7 +43,7 @@
         <!-- TomTom Maps API Key -->
         <meta-data
             android:name="com.tomtom.online.key"
-            android:value="LQQ5FC01CqHB6TA6H1mL1aNjd9NWkfuZ" />
+            android:value="${tomtomApiKey}" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

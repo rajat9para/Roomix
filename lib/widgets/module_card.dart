@@ -141,9 +141,10 @@ class _ModuleCardState extends State<ModuleCard> with SingleTickerProviderStateM
                               scale: _isHovered ? 1.1 : 1.0,
                               duration: const Duration(milliseconds: 300),
                               curve: Curves.easeOut,
-                              child: Text(
+                              child: Icon(
                                 widget.module.icon,
-                                style: const TextStyle(fontSize: 36),
+                                size: 36,
+                                color: widget.module.color,
                               ),
                             ),
                           ),
@@ -202,7 +203,7 @@ class _ModuleCardState extends State<ModuleCard> with SingleTickerProviderStateM
 // Re-export the ModuleData class for convenience
 class ModuleData {
   final String title;
-  final String icon;
+  final IconData icon;
   final Widget Function() route;
   final Color color;
 

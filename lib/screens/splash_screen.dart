@@ -308,12 +308,21 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               ),
             ),
           ),
-          // Icon
-          const Center(
-            child: Icon(
-              Icons.home_work_rounded,
-              color: Colors.white,
-              size: 60,
+          // Logo image
+          Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: Image.asset(
+                'assets/images/NEW_LOGO.png',
+                width: 90,
+                height: 90,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.home_work_rounded,
+                  color: Colors.white,
+                  size: 60,
+                ),
+              ),
             ),
           ),
         ],

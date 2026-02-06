@@ -44,6 +44,7 @@ class _UtilitiesScreenState extends State<UtilitiesScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final isAdmin = authProvider.currentUser?.role == 'admin';
+    final isOwner = authProvider.currentUser?.role == 'owner';
 
     return Scaffold(
       appBar: AppBar(
@@ -259,17 +260,18 @@ class _UtilitiesScreenState extends State<UtilitiesScreen> {
             child: const Icon(Icons.map),
           ),
           const SizedBox(height: 16),
-          FloatingActionButton(
-            heroTag: 'add_fab',
-            onPressed: () {
-              SmoothNavigation.push(
-                context,
-                const AddUtilityScreen(),
-              );
-            },
-            backgroundColor: AppColors.primaryAccent,
-            child: const Icon(Icons.add),
-          ),
+          if (isOwner)
+            FloatingActionButton(
+              heroTag: 'add_fab',
+              onPressed: () {
+                SmoothNavigation.push(
+                  context,
+                  const AddUtilityScreen(),
+                );
+              },
+              backgroundColor: AppColors.primaryAccent,
+              child: const Icon(Icons.add),
+            ),
         ],
       ),
     );

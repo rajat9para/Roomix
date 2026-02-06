@@ -7,6 +7,7 @@ import 'package:roomix/providers/user_preferences_provider.dart';
 import 'package:roomix/screens/splash_screen.dart';
 import 'package:roomix/services/api_service.dart';
 import 'package:roomix/providers/utility_provider.dart';
+import 'package:roomix/providers/map_provider.dart';
 import 'package:roomix/utils/smooth_navigation.dart';
 
 void main() async {
@@ -32,6 +33,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => UserPreferencesProvider()),
         ChangeNotifierProvider(create: (_) => UtilityProvider()),
+        ChangeNotifierProvider(create: (_) => MapProvider()),
       ],
       child: const RoomixApp(),
     ),

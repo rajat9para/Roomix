@@ -17,6 +17,19 @@ const roommateProfileSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    gender: {
+      type: String,
+      enum: ['boys', 'girls', 'other'],
+      default: 'other',
+    },
+    courseYear: {
+      type: String,
+      default: '',
+    },
+    college: {
+      type: String,
+      default: '',
+    },
     preferences: {
       budget: {
         min: {

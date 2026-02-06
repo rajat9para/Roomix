@@ -5,6 +5,7 @@ import 'package:roomix/widgets/loading_indicator.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:roomix/screens/map/campus_map_screen.dart';
 import 'package:roomix/utils/smooth_navigation.dart';
+import 'package:roomix/services/map_service.dart';
 
 class RoomCard extends StatelessWidget {
   final RoomModel room;
@@ -168,8 +169,13 @@ class RoomCard extends StatelessWidget {
   }
 
   Widget _buildMapView(BuildContext context) {
-    final tomtomApiKey = 'LQQ5FC01CqHB6TA6H1mL1aNjd9NWkfuZ';
-    final mapPreviewUrl = 'https://api.tomtom.com/map/1/staticimage?center=${room.longitude},${room.latitude}&zoom=15&format=png&width=600&height=200&key=$tomtomApiKey';
+    final mapPreviewUrl = MapService.generatePreviewUrl(
+      centerLat: room.latitude ?? 28.5244,
+      centerLng: room.longitude ?? 77.1855,
+      zoomLevel: 15,
+      width: 600,
+      height: 200,
+    );
 
     return GestureDetector(
       onTap: () {
@@ -186,19 +192,26 @@ class RoomCard extends StatelessWidget {
           child: Stack(
             children: [
               // Map preview image
-              Image.network(
-                mapPreviewUrl,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey.shade200,
-                    child: const Center(
-                      child: Icon(Icons.map_rounded, color: AppColors.textGray),
+              mapPreviewUrl.isEmpty
+                  ? Container(
+                      color: Colors.grey.shade200,
+                      child: const Center(
+                        child: Icon(Icons.map_rounded, color: AppColors.textGray),
+                      ),
+                    )
+                  : Image.network(
+                      mapPreviewUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey.shade200,
+                          child: const Center(
+                            child: Icon(Icons.map_rounded, color: AppColors.textGray),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
 
               // Gradient overlay
               Container(

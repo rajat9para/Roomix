@@ -37,7 +37,8 @@ const createMess = async (req, res) => {
 
     try {
         const mess = new Mess({
-            name, monthlyPrice, timings, menuPreview, image
+            name, monthlyPrice, timings, menuPreview, image,
+            createdBy: req.user?._id ?? null,
         });
         const createdMess = await mess.save();
         res.status(201).json(createdMess);

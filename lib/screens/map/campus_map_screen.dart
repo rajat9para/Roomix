@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:roomix/constants/app_colors.dart';
 import 'package:roomix/models/map_marker_model.dart';
 import 'package:roomix/providers/map_provider.dart';
+import 'package:roomix/providers/user_preferences_provider.dart';
 import 'package:roomix/services/map_service.dart';
 import 'package:roomix/utils/smooth_navigation.dart';
 
@@ -40,17 +41,19 @@ class _CampusMapScreenState extends State<CampusMapScreen>
 
     // Initialize map provider with markers
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final prefs = context.read<UserPreferencesProvider>();
+      final lat = prefs.campusLat;
+      final lng = prefs.campusLng;
+      if (lat != null && lng != null) {
+        context.read<MapProvider>().updateMapView(lat, lng, 15);
+      }
       if (widget.initialMarkers != null) {
         context.read<MapProvider>().addMarkers(widget.initialMarkers!);
       }
       if (widget.filterCategory != null) {
         final provider = context.read<MapProvider>();
         provider.resetView();
-        provider.toggleCategory(MarkerCategory.pg);
-        provider.toggleCategory(MarkerCategory.mess);
-        provider.toggleCategory(MarkerCategory.service);
-        provider.toggleCategory(MarkerCategory.event);
-        provider.toggleCategory(widget.filterCategory!);
+        provider.setCategories({widget.filterCategory!});
       }
     });
   }
@@ -109,28 +112,41 @@ class _CampusMapScreenState extends State<CampusMapScreen>
         return Stack(
           fit: StackFit.expand,
           children: [
-            CachedNetworkImage(
-              imageUrl: mapUrl,
-              fit: BoxFit.cover,
-              placeholder: (context, _) => Container(
-                color: AppColors.darkBackground,
-                child: const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                ),
-              ),
-              errorWidget: (context, _, __) => Container(
-                color: AppColors.darkBackground,
-                child: Center(
-                  child: Text(
-                    'Map failed to load',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 14,
+            mapUrl.isEmpty
+                ? Container(
+                    color: AppColors.darkBackground,
+                    child: Center(
+                      child: Text(
+                        'TomTom key missing. Set TOMTOM_API_KEY.',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  )
+                : CachedNetworkImage(
+                    imageUrl: mapUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (context, _) => Container(
+                      color: AppColors.darkBackground,
+                      child: const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
+                    ),
+                    errorWidget: (context, _, __) => Container(
+                      color: AppColors.darkBackground,
+                      child: Center(
+                        child: Text(
+                          'Map failed to load',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.7),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ),
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -454,9 +470,10 @@ class _CampusMapScreenState extends State<CampusMapScreen>
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Center(
-                                child: Text(
+                                child: Icon(
                                   marker.getCategoryIcon(),
-                                  style: const TextStyle(fontSize: 64),
+                                  size: 64,
+                                  color: marker.getCategoryColor(),
                                 ),
                               ),
                             ),

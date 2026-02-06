@@ -9,8 +9,12 @@ class MessModel {
   final List<String>? specialities;
   final String? openingTime;
   final String? closingTime;
+  final String? timings;
+  final String? menuPreview;
   final bool isActive;
   final double rating;
+  final double? latitude;
+  final double? longitude;
   final List<MessReview> reviews;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -26,27 +30,51 @@ class MessModel {
     this.specialities,
     this.openingTime,
     this.closingTime,
+    this.timings,
+    this.menuPreview,
     required this.isActive,
     required this.rating,
+    this.latitude,
+    this.longitude,
     required this.reviews,
     required this.createdAt,
     required this.updatedAt,
   });
 
   factory MessModel.fromJson(Map<String, dynamic> json) {
+    final rawTimings = json['timings'] as String?;
+    final rawOpeningTime = json['openingTime'] as String?;
+    final rawClosingTime = json['closingTime'] as String?;
+    String? openingTime = rawOpeningTime;
+    String? closingTime = rawClosingTime;
+
+    if (openingTime == null && closingTime == null && rawTimings != null) {
+      final parts = rawTimings.split('-');
+      if (parts.length >= 2) {
+        openingTime = parts[0].trim();
+        closingTime = parts[1].trim();
+      }
+    }
+
+    final priceValue = json['price'] ?? json['monthlyPrice'];
+
     return MessModel(
       id: json['_id'] ?? json['id'],
       name: json['name'],
       image: json['image'],
-      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      price: (priceValue as num?)?.toDouble() ?? 0.0,
       address: json['address'],
       contact: json['contact'],
       specialization: json['specialization'],
       specialities: List<String>.from(json['specialities'] ?? []),
-      openingTime: json['openingTime'],
-      closingTime: json['closingTime'],
+      openingTime: openingTime,
+      closingTime: closingTime,
+      timings: rawTimings,
+      menuPreview: json['menuPreview'],
       isActive: json['isActive'] ?? true,
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
+      latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
+      longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
       reviews: (json['reviews'] as List?)
           ?.map((r) => MessReview.fromJson(r))
           .toList() ?? [],
@@ -67,8 +95,12 @@ class MessModel {
       'specialities': specialities,
       'openingTime': openingTime,
       'closingTime': closingTime,
+      'timings': timings,
+      'menuPreview': menuPreview,
       'isActive': isActive,
       'rating': rating,
+      'latitude': latitude,
+      'longitude': longitude,
       'reviews': reviews.map((r) => r.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),

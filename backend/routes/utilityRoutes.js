@@ -13,11 +13,11 @@ const {
     rejectUtility,
     getPendingUtilities
 } = require('../controllers/utilityController');
-const { protect, admin } = require('../middleware/authMiddleware');
+const { protect, admin, requireRole } = require('../middleware/authMiddleware');
 const router = express.Router();
 
 // Public routes
-router.route('/').get(getUtilities).post(protect, createUtility);
+router.route('/').get(getUtilities).post(protect, requireRole('owner'), createUtility);
 
 // Specific static routes BEFORE dynamic :id routes
 router.get('/category/:category', getUtilitiesByCategory);
@@ -33,6 +33,6 @@ router.put('/admin/:id/reject', protect, admin, rejectUtility);
 router.post('/:id/review', protect, addReview);
 
 // Dynamic ID routes LAST to prevent shadowing specific paths
-router.route('/:id').get(getUtility).put(protect, updateUtility).delete(protect, deleteUtility);
+router.route('/:id').get(getUtility).put(protect, requireRole('owner'), updateUtility).delete(protect, requireRole('owner'), deleteUtility);
 
 module.exports = router;

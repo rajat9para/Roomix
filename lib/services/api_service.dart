@@ -4,7 +4,7 @@ import 'package:roomix/models/utility_model.dart';
 import 'package:roomix/utils/storage_util.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:5000/api';
+  static const String baseUrl = 'https://roomix-ju9n.onrender.com/api';
   
   static late StorageUtil _storageUtil;
   
@@ -195,7 +195,13 @@ class ApiService {
   static Future<List<dynamic>> getRooms() async {
     try {
       final response = await dio.get('/rooms');
-      return response.data;
+      if (response.data is Map && response.data['rooms'] is List) {
+        return response.data['rooms'] as List;
+      }
+      if (response.data is List) {
+        return response.data as List;
+      }
+      return [];
     } on DioException catch (e) {
       throw Exception('Failed to fetch rooms');
     }
@@ -410,6 +416,74 @@ class ApiService {
       return response.data;
     } on DioException catch (e) {
       throw Exception(e.response?.data['message'] ?? 'Failed to mark as read');
+    }
+  }
+
+  // Dashboard stats
+  static Future<Map<String, dynamic>> getDashboardStats() async {
+    try {
+      final response = await dio.get('/stats');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to fetch stats');
+    }
+  }
+
+  // Global notifications
+  static Future<Map<String, dynamic>> getNotifications() async {
+    try {
+      final response = await dio.get('/notifications');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to fetch notifications');
+    }
+  }
+
+  // Admin APIs
+  static Future<Map<String, dynamic>> getAdminUsers() async {
+    try {
+      final response = await dio.get('/admin/users');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to fetch users');
+    }
+  }
+
+  static Future<Map<String, dynamic>> blockUser(String userId) async {
+    try {
+      final response = await dio.put('/admin/users/$userId/block', data: {});
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to block user');
+    }
+  }
+
+  static Future<Map<String, dynamic>> unblockUser(String userId) async {
+    try {
+      final response = await dio.put('/admin/users/$userId/unblock', data: {});
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to unblock user');
+    }
+  }
+
+  static Future<Map<String, dynamic>> getAdminNotifications() async {
+    try {
+      final response = await dio.get('/admin/notifications');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to fetch notifications');
+    }
+  }
+
+  static Future<Map<String, dynamic>> createAdminNotification(String message) async {
+    try {
+      final response = await dio.post('/admin/notifications', data: {
+        'message': message,
+      });
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to create notification');
     }
   }
 

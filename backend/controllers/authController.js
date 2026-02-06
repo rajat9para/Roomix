@@ -17,12 +17,16 @@ const authUser = async (req, res) => {
         return res.status(401).json({ message: 'Invalid email or password' });
     }
 
+    if (user.isBlocked) {
+        return res.status(403).json({ message: 'Account blocked. Please contact support.' });
+    }
+
     // 2. Check if role matches (user cannot login as admin if they are student)
     if (role && user.role !== role) {
         return res.status(401).json({ message: `Access denied. You are not a ${role}.` });
     }
 
-    // 3. ADMIN LOGIN FLOW (Strict OTP Check)
+    // 3. ADMIN LOGIN FLOW (OTP Only)
     if (user.role === 'admin') {
         const adminEmail = process.env.ADMIN_EMAIL;
 
@@ -31,40 +35,35 @@ const authUser = async (req, res) => {
             return res.status(403).json({ message: 'Access Denied: Not an authorized Admin email.' });
         }
 
-        // Verify Password first
-        if (await user.matchPassword(password)) {
-            // Generate OTP
-            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        // Generate OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-            // Hash OTP and save to DB
-            const salt = crypto.randomBytes(16).toString('hex');
-            const hashedOtp = crypto.createHmac('sha256', salt).update(otp).digest('hex');
+        // Hash OTP and save to DB
+        const salt = crypto.randomBytes(16).toString('hex');
+        const hashedOtp = crypto.createHmac('sha256', salt).update(otp).digest('hex');
 
-            user.otp = `${salt}:${hashedOtp}`; // Store salt and hash
-            user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 Minutes
+        user.otp = `${salt}:${hashedOtp}`; // Store salt and hash
+        user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 Minutes
+        await user.save();
+
+        // Send Email
+        try {
+            await sendEmail({
+                email: user.email,
+                subject: 'Roomix App - Admin Login OTP',
+                message: `Your OTP for Admin access is: ${otp}. It expires in 10 minutes.`,
+            });
+
+            return res.status(200).json({
+                message: 'OTP sent to admin email.',
+                requiresOtp: true,
+                email: user.email
+            });
+        } catch (error) {
+            user.otp = undefined;
+            user.otpExpires = undefined;
             await user.save();
-
-            // Send Email
-            try {
-                await sendEmail({
-                    email: user.email,
-                    subject: 'Roomix App - Admin Login OTP',
-                    message: `Your OTP for Admin access is: ${otp}. It expires in 10 minutes.`,
-                });
-
-                return res.status(200).json({
-                    message: 'OTP sent to admin email.',
-                    requiresOtp: true,
-                    email: user.email
-                });
-            } catch (error) {
-                user.otp = undefined;
-                user.otpExpires = undefined;
-                await user.save();
-                return res.status(500).json({ message: 'Email could not be sent.' });
-            }
-        } else {
-            return res.status(401).json({ message: 'Invalid email or password' });
+            return res.status(500).json({ message: 'Email could not be sent.' });
         }
     }
 
@@ -107,6 +106,9 @@ const googleAuth = async (req, res) => {
         let user = await User.findOne({ email });
 
         if (user) {
+            if (user.isBlocked) {
+                return res.status(403).json({ message: 'Account blocked. Please contact support.' });
+            }
             // User exists, check role match
             if (user.role !== role) {
                 return res.status(401).json({

@@ -35,6 +35,16 @@ const userSchema = mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    // Student onboarding fields
+    course: { type: String, default: '' },
+    year: { type: String, default: '' },
+    collegeName: { type: String, default: '' },
+    contactNumber: { type: String, default: '' },
+    campusLatitude: { type: Number, default: null },
+    campusLongitude: { type: Number, default: null },
+    campusAddress: { type: String, default: '' },
+    // Admin controls
+    isBlocked: { type: Boolean, default: false },
 }, {
     timestamps: true,
 });

@@ -28,6 +28,9 @@ app.use('/api/universities', require('./routes/universityRoutes'));
 app.use('/api/roommates', require('./routes/roommateRoutes'));
 app.use('/api/chat', require('./routes/chatRoutes'));
 app.use('/api/utilities', require('./routes/utilityRoutes'));
+app.use('/api/stats', require('./routes/statsRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 // Profile routes
 app.use('/api/profile', require('./routes/profileRoutes'));
 
