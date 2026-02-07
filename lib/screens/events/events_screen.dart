@@ -5,6 +5,7 @@ import 'package:roomix/services/api_service.dart';
 import 'package:roomix/models/event_model.dart';
 import 'package:roomix/constants/app_colors.dart';
 import 'package:roomix/widgets/loading_indicator.dart';
+import 'package:roomix/widgets/bookmark_button.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -207,21 +208,37 @@ class _EventsScreenState extends State<EventsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Title
-                Text(
-                  event.title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                
-                // Date
-                Row(
+                  // Title and Bookmark
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          event.title,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      BookmarkButton(
+                        itemId: event.id,
+                        type: 'event',
+                        itemTitle: event.title,
+                        itemImage: event.image,
+                        metadata: {
+                          'location': event.location ?? '',
+                          'date': event.eventDate.toString(),
+                          'description': event.description,
+                          'tags': event.tags,
+                        },
+                      ),
+                    ],
                   children: [
                     const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
                     const SizedBox(width: 8),

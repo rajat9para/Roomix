@@ -10,6 +10,8 @@ class MapProvider extends ChangeNotifier {
   double _centerLng = 77.1855;
   int _zoomLevel = 14;
   bool _isLoading = false;
+  String? _mapError;
+  bool _mapUnavailable = false;
   String? _selectedMarkerId;
   Set<MarkerCategory> _selectedCategories = {
     MarkerCategory.pg,
@@ -27,6 +29,8 @@ class MapProvider extends ChangeNotifier {
   double get centerLng => _centerLng;
   int get zoomLevel => _zoomLevel;
   bool get isLoading => _isLoading;
+  String? get mapError => _mapError;
+  bool get mapUnavailable => _mapUnavailable;
   String? get selectedMarkerId => _selectedMarkerId;
   Set<MarkerCategory> get selectedCategories => _selectedCategories;
 
@@ -54,8 +58,17 @@ class MapProvider extends ChangeNotifier {
       _allMarkers = markers;
       _applyFilters();
       _clusterMarkers();
+      // If MapMyIndia API key is missing, mark map unavailable
+      if (!MapService.hasApiKey) {
+        _mapUnavailable = true;
+        _mapError = 'MapMyIndia API key not configured';
+      } else {
+        _mapUnavailable = false;
+        _mapError = null;
+      }
     } catch (e) {
       print('Error initializing markers: $e');
+      _mapError = e.toString();
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -159,6 +172,35 @@ class MapProvider extends ChangeNotifier {
       );
       return distance <= radiusKm;
     }).toList();
+  }
+
+  /// Return a map image URL or the asset placeholder if map is unavailable.
+  String getMapImageUrl({int width = 1200, int height = 1600}) {
+    try {
+      if (!MapService.hasApiKey) return MapService.placeholderAsset;
+      final markers = _filteredMarkers.length > 20 ? _filteredMarkers.take(20).toList() : _filteredMarkers;
+      final url = MapService.generateStaticMapUrl(
+        centerLat: _centerLat,
+        centerLng: _centerLng,
+        zoomLevel: _zoomLevel,
+        width: width,
+        height: height,
+        markers: markers,
+      );
+      if (url.isEmpty) return MapService.placeholderAsset;
+      return url;
+    } catch (e) {
+      _mapError = e.toString();
+      _mapUnavailable = true;
+      notifyListeners();
+      return MapService.placeholderAsset;
+    }
+  }
+
+  void clearMapError() {
+    _mapError = null;
+    _mapUnavailable = false;
+    notifyListeners();
   }
 
   /// Apply category filters

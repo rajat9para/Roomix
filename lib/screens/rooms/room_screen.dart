@@ -6,7 +6,10 @@ import 'package:roomix/models/room_model.dart';
 import 'package:roomix/constants/app_colors.dart';
 import 'package:roomix/widgets/room_card.dart';
 import 'package:roomix/widgets/loading_indicator.dart';
+import 'package:roomix/widgets/filter_bottom_sheet.dart';
+import 'package:roomix/widgets/sort_chip.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:async';
 
 class RoomScreen extends StatefulWidget {
   const RoomScreen({super.key});
@@ -17,14 +20,45 @@ class RoomScreen extends StatefulWidget {
 
 class _RoomScreenState extends State<RoomScreen> {
   late AuthProvider _authProvider;
-  List<RoomModel> _rooms = [];
+  List<RoomModel> _allRooms = [];
+  List<RoomModel> _filteredRooms = [];
   bool _isLoading = true;
   String _errorMessage = '';
+  
+  // Search and Filter state
+  TextEditingController _searchController = TextEditingController();
+  String _selectedSort = 'newest'; // newest, price_low, price_high, rating, distance
+  Timer? _searchDebounce;
+  
+  // Filter options
+  Set<String> _selectedCategories = {'Single Room', 'Double Room', 'Triple Room', 'PG', 'Hostel'};
+  Set<String> _selectedAmenities = {'WiFi', 'AC', 'Attached Bathroom', 'Parking', 'Meals'};
+  double _minPrice = 0;
+  double _maxPrice = 50000;
+  double _selectedMinPrice = 0;
+  double _selectedMaxPrice = 50000;
+  bool _verifiedOnly = false;
+  double? _minRating;
 
   @override
   void initState() {
     super.initState();
     _fetchRooms();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+      _applyFilters();
+    });
   }
 
   Future<void> _fetchRooms() async {
@@ -35,13 +69,100 @@ class _RoomScreenState extends State<RoomScreen> {
 
     try {
       final roomsData = await ApiService.getRooms();
-      _rooms = roomsData.map((room) => RoomModel.fromJson(room)).toList();
+      _allRooms = roomsData.map((room) => RoomModel.fromJson(room)).toList();
+      
+      // Calculate price range from fetched rooms
+      if (_allRooms.isNotEmpty) {
+        final prices = _allRooms.map((r) => r.price?.toDouble() ?? 0).toList();
+        _minPrice = prices.reduce((a, b) => a < b ? a : b);
+        _maxPrice = prices.reduce((a, b) => a > b ? a : b);
+        _selectedMaxPrice = _maxPrice;
+      }
+      
+      _applyFilters();
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  void _applyFilters() {
+    List<RoomModel> filtered = List.from(_allRooms);
+    final searchQuery = _searchController.text.toLowerCase();
+
+    // Search filter
+    if (searchQuery.isNotEmpty) {
+      filtered = filtered
+          .where((room) =>
+              room.title?.toLowerCase().contains(searchQuery) ?? false ||
+              room.description?.toLowerCase().contains(searchQuery) ?? false ||
+              room.address?.toLowerCase().contains(searchQuery) ?? false)
+          .toList();
+    }
+
+    // Category filter
+    filtered = filtered
+        .where((room) => _selectedCategories.contains(room.category))
+        .toList();
+
+    // Price range filter
+    filtered = filtered
+        .where((room) {
+          final roomPrice = room.price?.toDouble() ?? 0;
+          return roomPrice >= _selectedMinPrice && roomPrice <= _selectedMaxPrice;
+        })
+        .toList();
+
+    // Amenities filter - room must have all selected amenities
+    if (_selectedAmenities.isNotEmpty) {
+      filtered = filtered
+          .where((room) {
+            final roomAmenities = room.amenities ?? [];
+            return _selectedAmenities
+                .every((amenity) => roomAmenities.contains(amenity));
+          })
+          .toList();
+    }
+
+    // Verified only filter
+    if (_verifiedOnly) {
+      filtered =
+          filtered.where((room) => room.isVerified ?? false).toList();
+    }
+
+    // Rating filter
+    if (_minRating != null) {
+      filtered = filtered
+          .where((room) => (room.rating ?? 0) >= _minRating!)
+          .toList();
+    }
+
+    // Apply sorting
+    _applySorting(filtered);
+
+    setState(() {
+      _filteredRooms = filtered;
+    });
+  }
+
+  void _applySorting(List<RoomModel> rooms) {
+    switch (_selectedSort) {
+      case 'price_low':
+        rooms.sort((a, b) => (a.price ?? 0).compareTo(b.price ?? 0));
+        break;
+      case 'price_high':
+        rooms.sort((a, b) => (b.price ?? 0).compareTo(a.price ?? 0));
+        break;
+      case 'rating':
+        rooms.sort((a, b) => (b.rating ?? 0).compareTo(a.rating ?? 0));
+        break;
+      case 'newest':
+      default:
+        // Assuming rooms are returned in newest first order from API
+        break;
     }
   }
 
@@ -56,41 +177,259 @@ class _RoomScreenState extends State<RoomScreen> {
     }
   }
 
+  void _showFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return FilterBottomSheet(
+          title: 'Filter Rooms',
+          sections: [
+            FilterSection(
+              title: 'Room Type',
+              type: 'checkbox',
+              options: ['Single Room', 'Double Room', 'Triple Room', 'PG', 'Hostel'],
+            ),
+            FilterSection(
+              title: 'Price Range',
+              type: 'range',
+              minValue: _minPrice,
+              maxValue: _maxPrice,
+            ),
+            FilterSection(
+              title: 'Amenities',
+              type: 'checkbox',
+              options: ['WiFi', 'AC', 'Attached Bathroom', 'Parking', 'Meals'],
+            ),
+            FilterSection(
+              title: 'Rating',
+              type: 'radio',
+              options: ['Any', '3★+', '4★+', '4.5★+'],
+            ),
+          ],
+          initialFilters: {
+            ..._selectedCategories.asMap().entries.fold<Map<String, dynamic>>(
+                {}, (acc, entry) => {...acc, entry.value: true}),
+            'min': _selectedMinPrice,
+            'max': _selectedMaxPrice,
+            ..._selectedAmenities.asMap().entries.fold<Map<String, dynamic>>(
+                {}, (acc, entry) => {...acc, entry.value: true}),
+          },
+          onApply: (filters) {
+            setState(() {
+              _selectedCategories = filters.entries
+                  .where((e) =>
+                      ['Single Room', 'Double Room', 'Triple Room', 'PG', 'Hostel']
+                          .contains(e.key) &&
+                      e.value == true)
+                  .map((e) => e.key as String)
+                  .toSet();
+              _selectedMinPrice = filters['min'] ?? _minPrice;
+              _selectedMaxPrice = filters['max'] ?? _maxPrice;
+              _selectedAmenities = filters.entries
+                  .where((e) =>
+                      ['WiFi', 'AC', 'Attached Bathroom', 'Parking', 'Meals']
+                          .contains(e.key) &&
+                      e.value == true)
+                  .map((e) => e.key as String)
+                  .toSet();
+
+              final ratingString = filters['selected'] as String?;
+              if (ratingString == 'Any') {
+                _minRating = null;
+              } else if (ratingString == '3★+') {
+                _minRating = 3.0;
+              } else if (ratingString == '4★+') {
+                _minRating = 4.0;
+              } else if (ratingString == '4.5★+') {
+                _minRating = 4.5;
+              }
+            });
+            _applyFilters();
+          },
+          onReset: () {
+            setState(() {
+              _selectedCategories = {'Single Room', 'Double Room', 'Triple Room', 'PG', 'Hostel'};
+              _selectedAmenities = {'WiFi', 'AC', 'Attached Bathroom', 'Parking', 'Meals'};
+              _selectedMinPrice = _minPrice;
+              _selectedMaxPrice = _maxPrice;
+              _minRating = null;
+              _verifiedOnly = false;
+            });
+            _applyFilters();
+          },
+        );
+      },
+    );
+  }
+
+  int get _activeFilterCount {
+    int count = 0;
+    if (_selectedCategories.length < 5) count++;
+    if (_selectedMinPrice > _minPrice || _selectedMaxPrice < _maxPrice) count++;
+    if (_selectedAmenities.isNotEmpty) count++;
+    if (_minRating != null) count++;
+    if (_verifiedOnly) count++;
+    if (_searchController.text.isNotEmpty) count++;
+    return count;
+  }
+
   @override
   Widget build(BuildContext context) {
     _authProvider = Provider.of<AuthProvider>(context);
 
     return Scaffold(
+      backgroundColor: AppColors.darkBackground,
       appBar: AppBar(
-        title: const Text(
-          'Find Your Room',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: AppColors.primary,
+        title: const Text('Find Your Room'),
+        backgroundColor: AppColors.darkBackground,
         elevation: 0,
+        actions: [
+          Badge(
+            label: Text('${_activeFilterCount}'),
+            isLabelVisible: _activeFilterCount > 0,
+            child: IconButton(
+              icon: const Icon(Icons.tune),
+              onPressed: _showFilterBottomSheet,
+            ),
+          ),
+        ],
       ),
       body: Container(
-        color: AppColors.background,
-        child: _isLoading
-            ? const LoadingIndicator()
-            : _rooms.isEmpty
-                ? _buildEmptyState()
-                : RefreshIndicator(
-                    onRefresh: _fetchRooms,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _rooms.length,
-                      itemBuilder: (context, index) {
-                        return RoomCard(
-                          room: _rooms[index],
-                          onContactPressed: () => _handleContactOwner(_rooms[index].contact),
-                        );
-                      },
-                    ),
+        color: AppColors.darkBackground,
+        child: Column(
+          children: [
+            // Search bar
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                controller: _searchController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Search rooms...',
+                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                  prefixIcon: Icon(Icons.search, color: Colors.white.withOpacity(0.6)),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          color: Colors.white.withOpacity(0.6),
+                          onPressed: () {
+                            _searchController.clear();
+                            _applyFilters();
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF8B5CF6), width: 2),
+                  ),
+                ),
+              ),
+            ),
+
+            // Sort chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  SortChip(
+                    label: 'Newest',
+                    icon: Icons.fiber_new,
+                    isActive: _selectedSort == 'newest',
+                    onTap: () {
+                      setState(() => _selectedSort = 'newest');
+                      _applyFilters();
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  SortChip(
+                    label: 'Price: Low-High',
+                    icon: Icons.trending_down,
+                    isActive: _selectedSort == 'price_low',
+                    onTap: () {
+                      setState(() => _selectedSort = 'price_low');
+                      _applyFilters();
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  SortChip(
+                    label: 'Price: High-Low',
+                    icon: Icons.trending_up,
+                    isActive: _selectedSort == 'price_high',
+                    onTap: () {
+                      setState(() => _selectedSort = 'price_high');
+                      _applyFilters();
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  SortChip(
+                    label: 'Rating',
+                    icon: Icons.star,
+                    isActive: _selectedSort == 'rating',
+                    onTap: () {
+                      setState(() => _selectedSort = 'rating');
+                      _applyFilters();
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Results count
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${_filteredRooms.length} room${_filteredRooms.length != 1 ? 's' : ''} found',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Room list or loading/empty state
+            Expanded(
+              child: _isLoading
+                  ? const LoadingIndicator()
+                  : _errorMessage.isNotEmpty
+                      ? _buildErrorState()
+                      : _filteredRooms.isEmpty
+                          ? _buildEmptyState()
+                          : RefreshIndicator(
+                              onRefresh: _fetchRooms,
+                              child: ListView.builder(
+                                padding: const EdgeInsets.all(16),
+                                itemCount: _filteredRooms.length,
+                                itemBuilder: (context, index) {
+                                  return RoomCard(
+                                    room: _filteredRooms[index],
+                                    onContactPressed: () => _handleContactOwner(
+                                        _filteredRooms[index].contact),
+                                  );
+                                },
+                              ),
+                            ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -100,35 +439,110 @@ class _RoomScreenState extends State<RoomScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
+          Icon(
             Icons.search_off,
             size: 80,
-            color: AppColors.textSubtle,
+            color: Colors.white.withOpacity(0.3),
           ),
           const SizedBox(height: 16),
           Text(
-            'No rooms found',
-            style: TextStyle(
+            _searchController.text.isNotEmpty ? 'No rooms match your search' : 'No rooms found',
+            style: const TextStyle(
               fontSize: 18,
-              color: AppColors.textSubtle,
+              color: Colors.white,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Check back later or contact support',
+            'Try adjusting your filters or search criteria',
             style: TextStyle(
               fontSize: 14,
-              color: AppColors.textGray,
+              color: Colors.white.withOpacity(0.6),
             ),
           ),
           const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: _fetchRooms,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+          GestureDetector(
+            onTap: () {
+              _searchController.clear();
+              setState(() {
+                _selectedCategories = {'Single Room', 'Double Room', 'Triple Room', 'PG', 'Hostel'};
+                _selectedAmenities = {'WiFi', 'AC', 'Attached Bathroom', 'Parking', 'Meals'};
+                _selectedMinPrice = _minPrice;
+                _selectedMaxPrice = _maxPrice;
+                _minRating = null;
+              });
+              _applyFilters();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'Clear All Filters',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-            child: const Text('Try Again'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 80,
+            color: Colors.white.withOpacity(0.3),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Error loading rooms',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _errorMessage,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white.withOpacity(0.6),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 24),
+          GestureDetector(
+            onTap: _fetchRooms,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'Retry',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
         ],
       ),

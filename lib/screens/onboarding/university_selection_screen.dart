@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:provider/provider.dart';
 import 'package:roomix/constants/app_colors.dart';
 import 'package:roomix/models/university_model.dart';
@@ -184,42 +185,48 @@ class _UniversitySelectionScreenState extends State<UniversitySelectionScreen>
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-      child: TextField(
-        controller: _searchController,
-        onChanged: _filterUniversities,
-        style: TextStyle(color: Colors.grey[200]),
-        decoration: InputDecoration(
-          hintText: 'Search university by name or city...',
-          hintStyle: TextStyle(color: Colors.grey[500]),
-          prefixIcon: Icon(Icons.search, color: AppColors.primaryColor),
-          suffixIcon: _searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: Icon(Icons.clear, color: AppColors.primaryColor),
-                  onPressed: () {
-                    _searchController.clear();
-                    _filterUniversities('');
-                  },
-                )
-              : null,
-          filled: true,
-          fillColor: Colors.white.withOpacity(0.08),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: AppColors.primaryColor.withOpacity(0.3),
-            ),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: AppColors.primaryColor.withOpacity(0.3),
-            ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: AppColors.primaryColor,
-              width: 2,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: TextField(
+            controller: _searchController,
+            onChanged: _filterUniversities,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Search university by name or city...',
+              hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+              prefixIcon: Icon(Icons.search, color: const Color(0xFF8B5CF6)),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, color: Color(0xFF8B5CF6)),
+                      onPressed: () {
+                        _searchController.clear();
+                        _filterUniversities('');
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: Colors.white.withOpacity(0.08),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(
+                  color: Colors.white.withOpacity(0.15),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(
+                  color: Colors.white.withOpacity(0.15),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(
+                  color: Color(0xFF8B5CF6),
+                  width: 2,
+                ),
+              ),
             ),
           ),
         ),
@@ -318,13 +325,16 @@ class _UniversitySelectionScreenState extends State<UniversitySelectionScreen>
     bool isSelected,
   ) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16),
       child: GestureDetector(
         onTap: () => _selectUniversity(university),
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
           decoration: BoxDecoration(
             gradient: isSelected
-                ? AppColors.primaryGradient
+                ? const LinearGradient(
+                    colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                  )
                 : LinearGradient(
                     colors: [
                       Colors.white.withOpacity(0.08),
@@ -334,87 +344,110 @@ class _UniversitySelectionScreenState extends State<UniversitySelectionScreen>
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected
-                  ? AppColors.primaryColor
-                  : Colors.white.withOpacity(0.1),
-              width: isSelected ? 2 : 1,
+                  ? const Color(0xFF8B5CF6)
+                  : Colors.white.withOpacity(0.15),
+              width: isSelected ? 2 : 1.5,
             ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: AppColors.primaryColor.withOpacity(0.3),
-                      blurRadius: 16,
-                      spreadRadius: 0,
+                      color: const Color(0xFF8B5CF6).withOpacity(0.4),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
                     ),
                   ]
-                : null,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.school,
-                      color: AppColors.primaryColor,
-                      size: 28,
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        university.name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on,
-                            size: 14,
-                            color: Colors.grey[400],
+                  ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? Colors.white.withOpacity(0.2)
+                            : const Color(0xFF8B5CF6).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(
+                            isSelected ? 0.4 : 0.1,
                           ),
-                          const SizedBox(width: 4),
+                        ),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.school,
+                          color: isSelected
+                              ? Colors.white
+                              : const Color(0xFF8B5CF6),
+                          size: 28,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            '${university.city}, ${university.state}',
+                            university.name,
                             style: TextStyle(
-                              color: Colors.grey[400],
-                              fontSize: 12,
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.3,
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.location_on,
+                                size: 14,
+                                color: Colors.white.withOpacity(0.6),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${university.city}, ${university.state}',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                    AnimatedRotation(
+                      turns: isSelected ? 1 : 0,
+                      duration: const Duration(milliseconds: 300),
+                      child: Icon(
+                        isSelected ? Icons.check_circle : Icons.arrow_forward_ios,
+                        color: isSelected
+                            ? Colors.white
+                            : Colors.white.withOpacity(0.5),
+                        size: isSelected ? 24 : 16,
+                      ),
+                    ),
+                  ],
                 ),
-                if (isSelected)
-                  Icon(
-                    Icons.check_circle,
-                    color: Colors.white,
-                    size: 24,
-                  )
-                else
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    color: Colors.grey[500],
-                    size: 16,
-                  ),
-              ],
+              ),
             ),
           ),
         ),

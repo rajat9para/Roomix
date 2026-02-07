@@ -17,6 +17,9 @@ import 'package:roomix/screens/roommate_finder/roommate_finder_screen.dart';
 import 'package:roomix/screens/profile/profile_screen.dart';
 import 'package:roomix/screens/settings/settings_screen.dart';
 import 'package:roomix/screens/admin/admin_dashboard_screen.dart';
+import 'package:roomix/screens/owner/owner_dashboard_screen.dart';
+import 'package:roomix/screens/owner/add_room_screen.dart';
+import 'package:roomix/screens/owner/add_mess_screen.dart';
 import 'package:roomix/constants/app_colors.dart';
 import 'package:roomix/widgets/module_card.dart';
 import 'package:roomix/models/user_model.dart';
@@ -229,6 +232,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         // Stats Cards
                         (_isLoading || _statsLoading) ? _buildStatsRowShimmer() : _buildStatsRow(),
                         const SizedBox(height: 28),
+
+                        // Owner Quick Actions (if user is owner)
+                        if (_isOwner(Provider.of<AuthProvider>(context))) ...[
+                          _buildOwnerQuickActions(context),
+                          const SizedBox(height: 28),
+                        ],
 
                         // Quick Access Title
                         _buildSectionTitle('Quick Access'),
@@ -461,6 +470,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       label: const Text('Admin Dashboard'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.secondary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                // Owner Dashboard Button
+                if (authProvider.currentUser?.role == 'owner') ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const OwnerDashboardScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.business_center_rounded, size: 20),
+                      label: const Text('Owner Dashboard'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -908,6 +943,126 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         fontSize: 20,
         fontWeight: FontWeight.bold,
         color: Colors.white,
+      ),
+    );
+  }
+
+  bool _isOwner(AuthProvider authProvider) {
+    final user = authProvider.currentUser;
+    if (user == null) return false;
+    final role = user.role?.toLowerCase() ?? '';
+    return role == 'owner' || role == 'admin';
+  }
+
+  Widget _buildOwnerQuickActions(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF8B5CF6).withOpacity(0.1),
+            const Color(0xFFEC4899).withOpacity(0.1),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF8B5CF6).withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.business_center_rounded,
+                color: Colors.white.withOpacity(0.8),
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Owner Tools',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white.withOpacity(0.9),
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildOwnerActionButton(
+                  context,
+                  icon: Icons.home_work_rounded,
+                  label: 'Add Room',
+                  onTap: () {
+                    SmoothNavigation.push(context, const AddRoomScreen());
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildOwnerActionButton(
+                  context,
+                  icon: Icons.restaurant_rounded,
+                  label: 'Add Mess',
+                  onTap: () {
+                    SmoothNavigation.push(context, const AddMessScreen());
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOwnerActionButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.15),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: Colors.white, size: 22),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

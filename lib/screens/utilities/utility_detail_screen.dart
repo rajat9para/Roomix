@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:roomix/providers/utility_provider.dart';
 import 'package:roomix/constants/app_colors.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:roomix/widgets/bookmark_button.dart';
 
 class UtilityDetailScreen extends StatefulWidget {
   final String utilityId;
@@ -79,22 +80,24 @@ class _UtilityDetailScreenState extends State<UtilityDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Utility Details'),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.black87,
-      ),
-      body: Consumer<UtilityProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoading) {
-            return _buildShimmer();
-          }
+    return Consumer<UtilityProvider>(
+      builder: (context, provider, _) {
+        if (provider.isLoading) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Utility Details'),
+            ),
+            body: _buildShimmer(),
+          );
+        }
 
-          final utility = provider.selectedUtility;
-          if (utility == null) {
-            return Center(
+        final utility = provider.selectedUtility;
+        if (utility == null) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Utility Details'),
+            ),
+            body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -113,10 +116,35 @@ class _UtilityDetailScreenState extends State<UtilityDetailScreen> {
                   ),
                 ],
               ),
-            );
-          }
+            ),
+          );
+        }
 
-          return Container(
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Utility Details'),
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            foregroundColor: Colors.black87,
+            actions: [
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: BookmarkButton(
+                  itemId: utility.id,
+                  type: 'utility',
+                  itemTitle: utility.name,
+                  itemImage: utility.image,
+                  rating: utility.rating,
+                  metadata: {
+                    'category': utility.category,
+                    'location': utility.location ?? '',
+                    'verified': utility.verified,
+                  },
+                ),
+              ),
+            ],
+          ),
+          body: Container(
             decoration: const BoxDecoration(
               gradient: AppColors.backgroundGradient,
             ),

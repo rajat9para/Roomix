@@ -58,8 +58,8 @@
 		<string>tel</string>
 	</array>
 	
-	<!-- TomTom Maps API Key -->
+	<!-- TomTom Maps API Key (set via build settings or CI). -->
 	<key>TomTomOnlineKey</key>
-	<string>LQQ5FC01CqHB6TA6H1mL1aNjd9NWkfuZ</string>
+	<string>$(TOMTOM_API_KEY)</string>
 </dict>
 </plist>

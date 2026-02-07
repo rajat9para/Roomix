@@ -241,11 +241,11 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
         child: Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
+            color: Colors.white.withOpacity(0.08),
             borderRadius: BorderRadius.circular(50),
             border: Border.all(
-              color: Colors.white.withOpacity(0.2),
-              width: 1,
+              color: Colors.white.withOpacity(0.15),
+              width: 1.5,
             ),
           ),
           child: Row(
@@ -261,22 +261,22 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
 
   Widget _buildFormContainer(AuthProvider authProvider) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: Container(
           padding: const EdgeInsets.all(28),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.95),
-            borderRadius: BorderRadius.circular(24),
+            color: Colors.white.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.white.withOpacity(0.3),
-              width: 1,
+              color: Colors.white.withOpacity(0.15),
+              width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 30,
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 25,
                 offset: const Offset(0, 15),
               ),
             ],
@@ -284,7 +284,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
           child: Column(
             children: [
               // Name Field
-              _buildPremiumTextField(
+              _buildGlassTextField(
                 controller: _nameController,
                 hintText: 'Enter your full name',
                 labelText: 'Full Name',
@@ -294,7 +294,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
               const SizedBox(height: 16),
 
               // Email Field
-              _buildPremiumTextField(
+              _buildGlassTextField(
                 controller: _emailController,
                 hintText: 'Enter your email',
                 labelText: 'Email',
@@ -305,7 +305,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
               const SizedBox(height: 16),
 
               // Password Field
-              _buildPremiumTextField(
+              _buildGlassTextField(
                 controller: _passwordController,
                 hintText: 'Create a password',
                 labelText: 'Password',
@@ -319,7 +319,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
               const SizedBox(height: 16),
 
               // Confirm Password Field
-              _buildPremiumTextField(
+              _buildGlassTextField(
                 controller: _confirmPasswordController,
                 hintText: 'Confirm your password',
                 labelText: 'Confirm Password',
@@ -335,7 +335,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
               const SizedBox(height: 24),
 
               // Sign Up Button
-              _buildPrimaryButton(
+              _buildGradientButton(
                 onPressed: authProvider.isLoading ? null : _handleSignup,
                 text: authProvider.isLoading ? 'Creating Account...' : 'Create Account',
                 isLoading: authProvider.isLoading,
@@ -343,20 +343,20 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
               const SizedBox(height: 16),
 
               // Divider
-              const Row(
+              Row(
                 children: [
-                  Expanded(child: Divider(color: Color(0xFFE5E7EB))),
+                  Expanded(child: Divider(color: Colors.white.withOpacity(0.1))),
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
                       'OR',
                       style: TextStyle(
-                        color: Color(0xFF9CA3AF),
+                        color: Colors.white.withOpacity(0.5),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
-                  Expanded(child: Divider(color: Color(0xFFE5E7EB))),
+                  Expanded(child: Divider(color: Colors.white.withOpacity(0.1))),
                 ],
               ),
               const SizedBox(height: 16),
@@ -370,19 +370,19 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEE2E2),
+                    color: Colors.red.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFFCA5A5)),
+                    border: Border.all(color: Colors.red.withOpacity(0.3)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 20),
+                      const Icon(Icons.error_outline, color: Color(0xFFEF4444), size: 20),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           authProvider.errorMessage!,
                           style: const TextStyle(
-                            color: Color(0xFFDC2626),
+                            color: Color(0xFFEF4444),
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
@@ -398,7 +398,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
               Text(
                 'By signing up, you agree to our Terms of Service and Privacy Policy.',
                 style: TextStyle(
-                  color: Colors.grey.shade600,
+                  color: Colors.white.withOpacity(0.6),
                   fontSize: 12,
                 ),
                 textAlign: TextAlign.center,
@@ -411,14 +411,14 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                 children: [
                   Text(
                     "Already have an account? ",
-                    style: TextStyle(color: Colors.grey.shade600),
+                    style: TextStyle(color: Colors.white.withOpacity(0.6)),
                   ),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: const Text(
                       'Sign In',
                       style: TextStyle(
-                        color: Color(0xFF1E3A8A),
+                        color: Color(0xFF8B5CF6),
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
@@ -433,7 +433,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildPremiumTextField({
+  Widget _buildGlassTextField({
     required TextEditingController controller,
     required String hintText,
     required String labelText,
@@ -442,70 +442,90 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
     TextInputType? keyboardType,
     String? Function(String?)? validator,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1E3A8A).withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.15),
+              width: 1,
+            ),
           ),
-        ],
-      ),
-      child: TextFormField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        validator: validator,
-        onChanged: (_) => _clearError(),
-        style: const TextStyle(
-          fontSize: 16,
-          color: Color(0xFF1F2937),
-          fontWeight: FontWeight.w500,
-        ),
-        decoration: InputDecoration(
-          hintText: hintText,
-          labelText: labelText,
-          prefixIcon: Container(
-            padding: const EdgeInsets.all(12),
-            child: Icon(icon, color: const Color(0xFF3B82F6), size: 22),
-          ),
-          filled: true,
-          fillColor: const Color(0xFFF8FAFC),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFE5E7EB), width: 1),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFDC2626), width: 2),
-          ),
-          labelStyle: const TextStyle(
-            color: Color(0xFF6B7280),
-            fontWeight: FontWeight.w500,
-          ),
-          hintStyle: TextStyle(
-            color: Colors.grey.shade400,
+          child: TextFormField(
+            controller: controller,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            validator: validator,
+            onChanged: (_) => _clearError(),
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: InputDecoration(
+              hintText: hintText,
+              labelText: labelText,
+              prefixIcon: Container(
+                padding: const EdgeInsets.all(12),
+                child: Icon(icon, color: const Color(0xFF8B5CF6), size: 22),
+              ),
+              filled: true,
+              fillColor: Colors.transparent,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Colors.white.withOpacity(0.15),
+                  width: 1,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Color(0xFF8B5CF6),
+                  width: 1.5,
+                ),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Color(0xFFEF4444),
+                  width: 1,
+                ),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Color(0xFFEF4444),
+                  width: 1.5,
+                ),
+              ),
+              labelStyle: TextStyle(
+                color: Colors.white.withOpacity(0.6),
+                fontWeight: FontWeight.w500,
+              ),
+              hintStyle: TextStyle(
+                color: Colors.white.withOpacity(0.4),
+              ),
+              errorStyle: const TextStyle(
+                color: Color(0xFFEF4444),
+                fontSize: 12,
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildPrimaryButton({
+  Widget _buildGradientButton({
     required VoidCallback? onPressed,
     required String text,
     bool isLoading = false,
@@ -515,44 +535,43 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
       height: 56,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+          colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
         ),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E3A8A).withOpacity(0.4),
+            color: const Color(0xFF8B5CF6).withOpacity(0.3),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Center(
+            child: isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : Text(
+                    text,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
           ),
         ),
-        child: isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2.5,
-                ),
-              )
-            : Text(
-                text,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                  letterSpacing: 0.5,
-                ),
-              ),
       ),
     );
   }
@@ -562,59 +581,54 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
       width: double.infinity,
       height: 56,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ElevatedButton(
-        onPressed: _isGoogleLoading ? null : _handleGoogleSignUp,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+          width: 1.5,
         ),
-        child: _isGoogleLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color: Color(0xFF1E3A8A),
-                ),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.network(
-                    'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
-                    height: 24,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _isGoogleLoading ? null : _handleGoogleSignUp,
+          borderRadius: BorderRadius.circular(12),
+          child: _isGoogleLoading
+              ? const Center(
+                  child: SizedBox(
                     width: 24,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.g_mobiledata,
-                      size: 28,
-                      color: Color(0xFF4285F4),
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Sign up with Google',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF374151),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.network(
+                      'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
+                      height: 24,
+                      width: 24,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.g_mobiledata,
+                        size: 28,
+                        color: Color(0xFF4285F4),
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Sign up with Google',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
       ),
     );
   }
@@ -633,12 +647,18 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
+            color: isSelected ? Color(0xFF8B5CF6).withOpacity(0.3) : Colors.transparent,
             borderRadius: BorderRadius.circular(50),
+            border: isSelected
+                ? Border.all(
+                    color: Color(0xFF8B5CF6).withOpacity(0.5),
+                    width: 1.5,
+                  )
+                : null,
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Color(0xFF8B5CF6).withOpacity(0.2),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -651,13 +671,13 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
               Icon(
                 icon,
                 size: 18,
-                color: isSelected ? const Color(0xFF1E3A8A) : Colors.white.withOpacity(0.9),
+                color: isSelected ? const Color(0xFF8B5CF6) : Colors.white.withOpacity(0.6),
               ),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? const Color(0xFF1E3A8A) : Colors.white,
+                  color: isSelected ? Colors.white : Colors.white.withOpacity(0.6),
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
                 ),

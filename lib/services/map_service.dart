@@ -1,13 +1,53 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:roomix/models/map_marker_model.dart';
 
 class MapService {
-  // TomTom API key - use environment variable if set, otherwise use hardcoded key
-  static const String _envKey = String.fromEnvironment('TOMTOM_API_KEY');
-  static const String _fallbackKey = 'LQQ5FC01CqHB6TA6H1mL1aNjd9NWkfuZ';
-  static String get tomtomApiKey => _envKey.isNotEmpty ? _envKey : _fallbackKey;
-  static const String tomtomBaseUrl = 'https://api.tomtom.com/map/1/staticimage';
+  /// MapMyIndia API key loaded from compile-time constants
+  /// 
+  /// Priority order:
+  /// 1. `MAPMYINDIA_API_KEY` passed via `--dart-define` at build time
+  /// 2. (No fallback shipped) — if not provided, the getter returns an empty string
+  /// 
+  /// To provide the key at build time:
+  /// - Flutter (recommended): `flutter run --dart-define=MAPMYINDIA_API_KEY=your_key`
+  /// - Android: `flutter build apk --dart-define=MAPMYINDIA_API_KEY=your_key`
+  /// 
+  /// Get your API key from: https://www.mapmyindia.com/
+  static const String _envKey = String.fromEnvironment('MAPMYINDIA_API_KEY');
+  // Intentionally no hardcoded fallback key in repository. If no dart-define is
+  // provided, the getter returns an empty string so no key is shipped in builds.
+  // A runtime override is supported for developer testing only (stored in
+  // `MapService.runtimeKey`) and is not persisted to compiled builds.
+  static String? runtimeKey;
+
+  static String get mapmyindiaApiKey {
+    // Runtime override takes precedence for local testing
+    if (runtimeKey != null && runtimeKey!.isNotEmpty) {
+      debugPrint('MapService: using runtime MapMyIndia API key override');
+      return runtimeKey!;
+    }
+
+    if (_envKey.isNotEmpty) return _envKey;
+
+    // In debug builds, surface an assertion to help developers remember to set the key.
+    assert(() {
+      // This message appears only in debug mode.
+      // You can set the key with: flutter run --dart-define=MAPMYINDIA_API_KEY=your_key
+      // or via CI/CD environment variables.
+      // ignore: avoid_print
+      print('Warning: MAPMYINDIA_API_KEY not provided; map features will be disabled.');
+      return true;
+    }());
+
+    return '';
+  }
+  
+  static const String mapmyindiaBaseUrl = 'https://apis.mapmyindia.com/advancedmaps/v1/staticimage';
+
+  /// Local placeholder asset to show when maps are unavailable.
+  static const String placeholderAsset = 'assets/images/NEW_LOGO.png';
 
 
   // Generate static map image URL with markers
@@ -19,31 +59,33 @@ class MapService {
     required int height,
     List<MapMarkerModel>? markers,
   }) {
-    if (tomtomApiKey.isEmpty) {
+    if (mapmyindiaApiKey.isEmpty) {
+      debugPrint('MapService: MAPMYINDIA_API_KEY is empty; not generating map URL');
       return '';
     }
-    final buffer = StringBuffer('$tomtomBaseUrl?');
+    final buffer = StringBuffer('$mapmyindiaBaseUrl?');
 
     buffer.write('center=${centerLng.toStringAsFixed(6)},${centerLat.toStringAsFixed(6)}');
     buffer.write('&zoom=$zoomLevel');
-    buffer.write('&format=png');
-    buffer.write('&width=$width');
-    buffer.write('&height=$height');
+    buffer.write('&size=${width}x${height}');
 
-    // Add markers if provided (single markers param with pipe-delimited coords)
+    // Add markers if provided (MapMyIndia format: lng,lat)
     if (markers != null && markers.isNotEmpty) {
       final markerParts = markers
           .map((marker) =>
               '${marker.longitude.toStringAsFixed(6)},${marker.latitude.toStringAsFixed(6)}')
           .toList();
-      final markerParam = Uri.encodeComponent(markerParts.join('|'));
+      final markerParam = markerParts.join(';');
       buffer.write('&markers=$markerParam');
     }
 
-    buffer.write('&key=$tomtomApiKey');
+    buffer.write('&key=$mapmyindiaApiKey');
 
     return buffer.toString();
   }
+
+  /// Convenience: returns true if a key is available (env or runtime override)
+  static bool get hasApiKey => mapmyindiaApiKey.isNotEmpty;
 
   /// Lightweight preview URL without markers (faster and more reliable)
   static String generatePreviewUrl({
@@ -53,11 +95,11 @@ class MapService {
     int width = 600,
     int height = 300,
   }) {
-    if (tomtomApiKey.isEmpty) {
+    if (mapmyindiaApiKey.isEmpty) {
       return '';
     }
-    return '$tomtomBaseUrl?center=${centerLng.toStringAsFixed(6)},${centerLat.toStringAsFixed(6)}'
-        '&zoom=$zoomLevel&format=png&width=$width&height=$height&key=$tomtomApiKey';
+    return '$mapmyindiaBaseUrl?center=${centerLng.toStringAsFixed(6)},${centerLat.toStringAsFixed(6)}'
+        '&zoom=$zoomLevel&size=${width}x${height}&key=$mapmyindiaApiKey';
   }
 
   // Search for locations by query
@@ -67,26 +109,30 @@ class MapService {
     required double longitude,
     double radiusInMeters = 50000,
   }) async {
+    if (mapmyindiaApiKey.isEmpty) {
+      debugPrint('MapService.searchLocations: MAPMYINDIA_API_KEY missing; returning empty results');
+      return [];
+    }
+
     try {
       final dio = Dio();
-      final encodedQuery = Uri.encodeComponent(query);
       final response = await dio.get(
-        'https://api.tomtom.com/search/2/search/$encodedQuery.json',
+        'https://atlas.mapmyindia.com/api/places/textsearch/json',
         queryParameters: {
-          'key': tomtomApiKey,
-          'lat': latitude,
-          'lon': longitude,
-          'radiusMeters': radiusInMeters,
+          'query': query,
+          'location': '$latitude,$longitude',
+          'region': 'IND',
+          'key': mapmyindiaApiKey,
         },
       );
 
       if (response.statusCode == 200) {
-        final results = response.data['results'] as List;
-        return results.map((r) => r as Map<String, dynamic>).toList();
+        final results = response.data['results'] as List?;
+        return results?.map((r) => r as Map<String, dynamic>).toList() ?? [];
       }
       return [];
     } catch (e) {
-      print('Error searching locations: $e');
+      debugPrint('Error searching locations: $e');
       return [];
     }
   }
@@ -96,24 +142,31 @@ class MapService {
     double latitude,
     double longitude,
   ) async {
+    if (mapmyindiaApiKey.isEmpty) {
+      debugPrint('MapService.getAddressFromCoordinates: MAPMYINDIA_API_KEY missing; skipping request');
+      return null;
+    }
+
     try {
       final dio = Dio();
       final response = await dio.get(
-        'https://api.tomtom.com/search/2/reverseGeocode/${latitude.toStringAsFixed(6)},${longitude.toStringAsFixed(6)}.json',
+        'https://atlas.mapmyindia.com/api/places/reverse/json',
         queryParameters: {
-          'key': tomtomApiKey,
+          'lat': latitude,
+          'lng': longitude,
+          'key': mapmyindiaApiKey,
         },
       );
 
       if (response.statusCode == 200) {
-        final results = response.data['addresses'] as List;
-        if (results.isNotEmpty) {
-          return results[0]['address']['freeformAddress'] ?? 'Unknown location';
+        final results = response.data['results'] as List?;
+        if (results != null && results.isNotEmpty) {
+          return results[0]['formatted_address'] ?? 'Unknown location';
         }
       }
       return null;
     } catch (e) {
-      print('Error getting address: $e');
+      debugPrint('Error getting address: $e');
       return null;
     }
   }
@@ -122,29 +175,39 @@ class MapService {
   static Future<Map<String, double>?> getCoordinatesFromAddress(
     String address,
   ) async {
+    if (mapmyindiaApiKey.isEmpty) {
+      debugPrint('MapService.getCoordinatesFromAddress: MAPMYINDIA_API_KEY missing; skipping request');
+      return null;
+    }
+
     try {
       final dio = Dio();
-      final encodedAddress = Uri.encodeComponent(address);
       final response = await dio.get(
-        'https://api.tomtom.com/search/2/geocode/$encodedAddress.json',
+        'https://atlas.mapmyindia.com/api/places/geocode/json',
         queryParameters: {
-          'key': tomtomApiKey,
+          'address': address,
+          'key': mapmyindiaApiKey,
         },
       );
 
       if (response.statusCode == 200) {
-        final results = response.data['results'] as List;
-        if (results.isNotEmpty) {
-          final position = results[0]['position'] as Map<String, dynamic>;
-          return {
-            'latitude': (position['lat'] as num).toDouble(),
-            'longitude': (position['lon'] as num).toDouble(),
-          };
+        final results = response.data['results'] as List?;
+        if (results != null && results.isNotEmpty) {
+          final geometry = results[0]['geometry'] as Map<String, dynamic>?;
+          if (geometry != null) {
+            final location = geometry['location'] as Map<String, dynamic>?;
+            if (location != null) {
+              return {
+                'latitude': (location['lat'] as num).toDouble(),
+                'longitude': (location['lng'] as num).toDouble(),
+              };
+            }
+          }
         }
       }
       return null;
     } catch (e) {
-      print('Error getting coordinates: $e');
+      debugPrint('Error getting coordinates: $e');
       return null;
     }
   }

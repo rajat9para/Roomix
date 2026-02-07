@@ -92,7 +92,7 @@ class AppColors {
     colors: [Color(0xFF1E293B), Color(0xFF334155)],
   );
 
-  // Glass Effect BoxDecoration
+  // Glass Effect BoxDecoration - Enhanced with stronger blur
   static BoxDecoration get glassDecoration => BoxDecoration(
     color: Colors.white.withOpacity(0.95),
     borderRadius: BorderRadius.circular(20),
@@ -103,7 +103,7 @@ class AppColors {
     boxShadow: [
       BoxShadow(
         color: Colors.black.withOpacity(0.15),
-        blurRadius: 25,
+        blurRadius: 30,
         offset: const Offset(0, 15),
       ),
     ],
@@ -118,9 +118,67 @@ class AppColors {
     ),
     boxShadow: [
       BoxShadow(
-        color: Colors.black.withOpacity(0.3),
-        blurRadius: 25,
+        color: Colors.black.withOpacity(0.4),
+        blurRadius: 30,
         offset: const Offset(0, 15),
+      ),
+    ],
+  );
+
+  // Enhanced Glassmorphism Card Decoration
+  static BoxDecoration get glassCardDecoration => BoxDecoration(
+    color: Colors.white.withOpacity(0.10),
+    borderRadius: BorderRadius.circular(20),
+    border: Border.all(
+      color: Colors.white.withOpacity(0.20),
+      width: 1,
+    ),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.25),
+        blurRadius: 25,
+        offset: const Offset(0, 8),
+      ),
+    ],
+  );
+
+  // Enhanced Glassmorphism Button Decoration
+  static BoxDecoration get glassButtonDecoration => BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Colors.white.withOpacity(0.12),
+        Colors.white.withOpacity(0.08),
+      ],
+    ),
+    borderRadius: BorderRadius.circular(12),
+    border: Border.all(
+      color: Colors.white.withOpacity(0.25),
+      width: 1.2,
+    ),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.2),
+        blurRadius: 15,
+        offset: const Offset(0, 5),
+      ),
+    ],
+  );
+
+  // Gradient with glass overlay
+  static BoxDecoration get gradientGlassDecoration => BoxDecoration(
+    gradient: primaryGradient,
+    borderRadius: BorderRadius.circular(20),
+    border: Border.all(
+      color: Colors.white.withOpacity(0.3),
+      width: 1,
+    ),
+    boxShadow: [
+      BoxShadow(
+        color: const Color(0xFF8B5CF6).withOpacity(0.4),
+        blurRadius: 25,
+        offset: const Offset(0, 10),
       ),
     ],
   );

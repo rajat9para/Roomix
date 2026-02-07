@@ -191,7 +191,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   Widget _buildBackgroundElements() {
     return Stack(
       children: [
-        // Top right animated circle
+        // Top right animated circle (reduced opacity)
         Positioned(
           top: -100,
           right: -100,
@@ -207,7 +207,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        const Color(0xFF8B5CF6).withOpacity(0.15),
+                        const Color(0xFF8B5CF6).withOpacity(0.08),
                         Colors.transparent,
                       ],
                     ),
@@ -217,7 +217,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             },
           ),
         ),
-        // Bottom left animated circle
+        // Bottom left animated circle (reduced opacity)
         Positioned(
           bottom: -150,
           left: -100,
@@ -233,7 +233,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        const Color(0xFFEC4899).withOpacity(0.1),
+                        const Color(0xFFEC4899).withOpacity(0.06),
                         Colors.transparent,
                       ],
                     ),
@@ -262,7 +262,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF10B981).withOpacity(0.3),
+                        color: const Color(0xFF10B981).withOpacity(0.2),
                         blurRadius: 20,
                       ),
                     ],
@@ -285,14 +285,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         borderRadius: BorderRadius.circular(35),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF8B5CF6).withOpacity(0.6),
-            blurRadius: 40,
-            offset: const Offset(0, 20),
+            color: const Color(0xFF8B5CF6).withOpacity(0.5),
+            blurRadius: 30,
+            offset: const Offset(0, 15),
           ),
           BoxShadow(
-            color: const Color(0xFFEC4899).withOpacity(0.4),
-            blurRadius: 60,
-            offset: const Offset(15, 15),
+            color: const Color(0xFFEC4899).withOpacity(0.3),
+            blurRadius: 50,
+            offset: const Offset(10, 10),
           ),
         ],
       ),
@@ -303,12 +303,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(35),
               border: Border.all(
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withOpacity(0.25),
                 width: 2,
               ),
             ),
           ),
-          // Logo image
+          // Logo image with enhanced error handling
           Center(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(28),
@@ -317,10 +317,24 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 width: 90,
                 height: 90,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => const Icon(
-                  Icons.home_work_rounded,
-                  color: Colors.white,
-                  size: 60,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.15),
+                        Colors.white.withOpacity(0.08),
+                      ],
+                    ),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.home_work_rounded,
+                      color: Colors.white,
+                      size: 50,
+                    ),
+                  ),
                 ),
               ),
             ),

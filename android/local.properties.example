@@ -1,0 +1,5 @@
+# Flutter SDK path
+flutter.sdk=C:\\flutter
+
+# TomTom API Key (alternative to environment variable)
+tomtom.api.key=your_tomtom_api_key_here

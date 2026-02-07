@@ -7,6 +7,7 @@ import 'package:roomix/models/map_marker_model.dart';
 import 'package:roomix/providers/map_provider.dart';
 import 'package:roomix/providers/user_preferences_provider.dart';
 import 'package:roomix/services/map_service.dart';
+import 'package:roomix/screens/settings/map_settings_screen.dart';
 import 'package:roomix/utils/smooth_navigation.dart';
 
 class CampusMapScreen extends StatefulWidget {
@@ -100,32 +101,43 @@ class _CampusMapScreenState extends State<CampusMapScreen>
             ? mapProvider.filteredMarkers.take(20).toList()
             : mapProvider.filteredMarkers;
 
-        final mapUrl = MapService.generateStaticMapUrl(
-          centerLat: mapProvider.centerLat,
-          centerLng: mapProvider.centerLng,
-          zoomLevel: mapProvider.zoomLevel,
-          width: 1200,
-          height: 1600,
-          markers: markers,
-        );
+        final mapUrl = mapProvider.getMapImageUrl(width: 1200, height: 1600);
+
+        // If provider reports map unavailable or an explicit error, show a message UI
+        if (mapProvider.mapUnavailable || (mapProvider.mapError != null && mapProvider.mapError!.isNotEmpty)) {
+          final message = mapProvider.mapUnavailable ? 'MapMyIndia API key not configured' : (mapProvider.mapError ?? 'Map error');
+          return Container(
+            color: AppColors.darkBackground,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    message,
+                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 16),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const MapSettingsScreen()),
+                      );
+                    },
+                    child: const Text('Configure API Key'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
 
         return Stack(
           fit: StackFit.expand,
           children: [
-            mapUrl.isEmpty
-                ? Container(
-                    color: AppColors.darkBackground,
-                    child: Center(
-                      child: Text(
-                        'TomTom key missing. Set TOMTOM_API_KEY.',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  )
-                : CachedNetworkImage(
+            // If the provider returned an asset path (placeholder), show it via Image.asset
+            mapUrl.startsWith('http')
+                ? CachedNetworkImage(
                     imageUrl: mapUrl,
                     fit: BoxFit.cover,
                     placeholder: (context, _) => Container(
@@ -137,15 +149,41 @@ class _CampusMapScreenState extends State<CampusMapScreen>
                     errorWidget: (context, _, __) => Container(
                       color: AppColors.darkBackground,
                       child: Center(
-                        child: Text(
-                          'Map failed to load',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
-                            fontSize: 14,
-                          ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Map failed to load',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.7),
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ElevatedButton(
+                                onPressed: () {
+                                  context.read<MapProvider>().clearMapError();
+                                  setState(() {});
+                                },
+                                child: const Text('Retry')),
+                            const SizedBox(height: 8),
+                            TextButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => const MapSettingsScreen()),
+                                  );
+                                },
+                                child: const Text('Open map settings'))
+                          ],
                         ),
                       ),
                     ),
+                  )
+                : Image.asset(
+                    mapUrl,
+                    fit: BoxFit.cover,
                   ),
             Container(
               decoration: BoxDecoration(
@@ -377,12 +415,12 @@ class _CampusMapScreenState extends State<CampusMapScreen>
     );
   }
 
-  @Deprecated('Markers are now handled by TomTom SDK')
+  @Deprecated('Markers are now handled by MapMyIndia SDK')
   Widget _buildMarkerPin(MapMarkerModel marker) {
     return const SizedBox.shrink();
   }
 
-  @Deprecated('Markers are now handled by TomTom SDK')
+  @Deprecated('Markers are now handled by MapMyIndia SDK')
   Widget _buildClusterPin(MapCluster cluster) {
     return const SizedBox.shrink();
   }

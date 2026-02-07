@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:ui';
 import 'package:provider/provider.dart';
 import 'package:roomix/constants/app_colors.dart';
 import 'package:roomix/models/chat_message_model.dart';
 import 'package:roomix/models/roommate_profile_model.dart';
 import 'package:roomix/providers/roommate_provider.dart';
+import 'package:roomix/widgets/filter_bottom_sheet.dart';
+import 'package:roomix/widgets/sort_chip.dart';
+import 'package:roomix/widgets/bookmark_button.dart';
 import 'package:roomix/screens/roommate_finder/profile_creation_screen.dart';
 import 'package:roomix/screens/roommate_finder/chat_screen.dart';
 import 'package:roomix/utils/smooth_navigation.dart';
@@ -17,14 +22,23 @@ class RoommateFinderScreen extends StatefulWidget {
 
 class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
   int _selectedTabIndex = 0;
+  late TextEditingController _searchController;
+  Timer? _searchDebounceTimer;
   String _filterGender = 'All';
   String _filterYear = 'All';
   String _filterCollege = '';
   String _sortBy = 'Best Match';
+  double _minBudget = 0;
+  double _maxBudget = 50000;
+  double _selectedMinBudget = 0;
+  double _selectedMaxBudget = 50000;
+  Set<String> _selectedLifestyle = {};
+  Set<String> _selectedInterests = {};
 
   @override
   void initState() {
     super.initState();
+    _searchController = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<RoommateProvider>();
       provider.getMyProfile();
@@ -34,156 +48,357 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
   }
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    _searchDebounceTimer?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    _searchDebounceTimer?.cancel();
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      setState(() {});
+    });
+  }
+
+  List<RoommateProfile> _applyFilters(List<RoommateProfile> matches) {
+    var filtered = matches.toList();
+    
+    // Search filter
+    if (_searchController.text.isNotEmpty) {
+      filtered = filtered.where((m) =>
+        m.name.toLowerCase().contains(_searchController.text.toLowerCase())
+      ).toList();
+    }
+    
+    // Gender filter
+    if (_filterGender != 'All') {
+      filtered = filtered
+          .where((m) => m.gender.toLowerCase() == _filterGender.toLowerCase())
+          .toList();
+    }
+    
+    // Year filter
+    if (_filterYear != 'All') {
+      filtered = filtered.where((m) => m.courseYear == _filterYear).toList();
+    }
+    
+    // College filter
+    if (_filterCollege.isNotEmpty) {
+      filtered = filtered
+          .where((m) =>
+              m.college.toLowerCase().contains(_filterCollege.toLowerCase()))
+          .toList();
+    }
+    
+    // Budget filter
+    filtered = filtered.where((m) => 
+      m.budgetMin >= _selectedMinBudget && m.budgetMax <= _selectedMaxBudget
+    ).toList();
+
+    // Lifestyle filter
+    if (_selectedLifestyle.isNotEmpty) {
+      filtered = filtered.where((m) =>
+        _selectedLifestyle.every((lifestyle) =>
+          m.lifestyle.contains(lifestyle)
+        )
+      ).toList();
+    }
+
+    // Apply sorting
+    _applySorting(filtered);
+    return filtered;
+  }
+
+  void _applySorting(List<RoommateProfile> items) {
+    switch (_sortBy) {
+      case 'Year':
+        items.sort((a, b) => a.courseYear.compareTo(b.courseYear));
+        break;
+      case 'College':
+        items.sort((a, b) => a.college.compareTo(b.college));
+        break;
+      case 'Best Match':
+      default:
+        items.sort((a, b) => (b.compatibility ?? 0).compareTo(a.compatibility ?? 0));
+        break;
+    }
+  }
+
+  int _getActiveFilterCount() {
+    int count = 0;
+    if (_filterGender != 'All') count++;
+    if (_filterYear != 'All') count++;
+    if (_filterCollege.isNotEmpty) count++;
+    if (_selectedLifestyle.isNotEmpty) count++;
+    if (_selectedMinBudget > _minBudget || _selectedMaxBudget < _maxBudget) count++;
+    return count;
+  }
+
+  void _showFilterBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return FilterBottomSheet(
+          filters: [
+            FilterSection(
+              title: 'Gender',
+              type: FilterType.radio,
+              options: ['All', 'girls', 'boys', 'other'],
+              selectedValues: [_filterGender],
+              onApply: (selected) {
+                setState(() {
+                  _filterGender = selected.isNotEmpty ? selected.first : 'All';
+                });
+              },
+            ),
+            FilterSection(
+              title: 'Year',
+              type: FilterType.radio,
+              options: ['All', '1st Year', '2nd Year', '3rd Year', '4th Year'],
+              selectedValues: [_filterYear],
+              onApply: (selected) {
+                setState(() {
+                  _filterYear = selected.isNotEmpty ? selected.first : 'All';
+                });
+              },
+            ),
+            FilterSection(
+              title: 'Budget',
+              type: FilterType.range,
+              minValue: _minBudget,
+              maxValue: _maxBudget,
+              selectedMin: _selectedMinBudget,
+              selectedMax: _selectedMaxBudget,
+              onApply: (min, max) {
+                setState(() {
+                  _selectedMinBudget = min;
+                  _selectedMaxBudget = max;
+                });
+              },
+            ),
+            FilterSection(
+              title: 'Lifestyle',
+              type: FilterType.checkbox,
+              options: ['Non-Smoker', 'Non-Drinker', 'Pet-Friendly', 'Plant Lover'],
+              selectedValues: _selectedLifestyle.toList(),
+              onApply: (selected) {
+                setState(() {
+                  _selectedLifestyle = selected.toSet();
+                });
+              },
+            ),
+          ],
+          onReset: () {
+            setState(() {
+              _filterGender = 'All';
+              _filterYear = 'All';
+              _filterCollege = '';
+              _selectedLifestyle.clear();
+              _selectedMinBudget = _minBudget;
+              _selectedMaxBudget = _maxBudget;
+            });
+          },
+        );
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Find Room Partner'),
+        title: const Text(
+          'Find Room Partner',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
         centerTitle: true,
-        backgroundColor: AppColors.primary,
+        backgroundColor: const Color(0xFF0F172A),
         elevation: 0,
         actions: [
           Consumer<RoommateProvider>(
             builder: (context, provider, _) => Padding(
               padding: const EdgeInsets.all(16),
-              child: GestureDetector(
-                onTap: () {
-                  if (provider.profileComplete) {
-                    _showProfileMenu(context, provider);
-                  } else {
-                    SmoothNavigation.push(
-                      context,
-                      const ProfileCreationScreen(),
-                    );
-                  }
-                },
-                child: CircleAvatar(
-                  backgroundColor: Colors.white.withOpacity(0.3),
-                  child: Icon(
-                    provider.profileComplete ? Icons.person : Icons.add,
-                    color: Colors.white,
+              child: Stack(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      if (provider.profileComplete) {
+                        _showProfileMenu(context, provider);
+                      } else {
+                        SmoothNavigation.push(
+                          context,
+                          const ProfileCreationScreen(),
+                        );
+                      }
+                    },
+                    child: CircleAvatar(
+                      backgroundColor: Colors.white.withOpacity(0.2),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                      child: Icon(
+                        provider.profileComplete ? Icons.person : Icons.add,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
-                ),
+                  if (_getActiveFilterCount() > 0)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFEC4899),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          _getActiveFilterCount().toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
         ],
       ),
-      body: Consumer<RoommateProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.primary,
-              ),
-            );
-          }
+      body: Container(
+        color: const Color(0xFF0F172A),
+        child: Consumer<RoommateProvider>(
+          builder: (context, provider, _) {
+            if (provider.isLoading) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Color(0xFF8B5CF6),
+                  ),
+                ),
+              );
+            }
 
-          if (!provider.profileComplete) {
-            return _buildNoProfileState(context);
-          }
+            if (!provider.profileComplete) {
+              return _buildNoProfileState(context);
+            }
 
-          return Column(
-            children: [
-              // Tab bar
-              Container(
-                color: AppColors.background,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedTabIndex = 0),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: _selectedTabIndex == 0
-                                    ? AppColors.primary
-                                    : Colors.transparent,
-                                width: 2,
+            return Column(
+              children: [
+                // Tab bar
+                Container(
+                  color: const Color(0xFF1E293B),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedTabIndex = 0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: _selectedTabIndex == 0
+                                      ? const Color(0xFF8B5CF6)
+                                      : Colors.transparent,
+                                  width: 2.5,
+                                ),
                               ),
                             ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              'Matches (${provider.matches.length})',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: _selectedTabIndex == 0
-                                    ? AppColors.primary
-                                    : AppColors.textGray,
+                            child: Center(
+                              child: Text(
+                                'Matches (${provider.matches.length})',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: _selectedTabIndex == 0
+                                      ? const Color(0xFF8B5CF6)
+                                      : Colors.white.withOpacity(0.6),
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedTabIndex = 1),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: _selectedTabIndex == 1
-                                    ? AppColors.primary
-                                    : Colors.transparent,
-                                width: 2,
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedTabIndex = 1),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: _selectedTabIndex == 1
+                                      ? const Color(0xFF8B5CF6)
+                                      : Colors.transparent,
+                                  width: 2.5,
+                                ),
                               ),
                             ),
-                          ),
-                          child: Center(
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                const Text(
-                                  'Chats',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
+                            child: Center(
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Text(
+                                    'Chats',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: _selectedTabIndex == 1
+                                          ? const Color(0xFF8B5CF6)
+                                          : Colors.white.withOpacity(0.6),
+                                    ),
                                   ),
-                                ),
-                                if (provider.conversations.any((c) => c.unreadCount > 0))
-                                  Positioned(
-                                    right: 10,
-                                    top: 8,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.red,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Text(
-                                        '${provider.conversations.where((c) => c.unreadCount > 0).length}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
+                                  if (provider.conversations.any((c) => c.unreadCount > 0))
+                                    Positioned(
+                                      right: 10,
+                                      top: 8,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFFEC4899),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Text(
+                                          '${provider.conversations.where((c) => c.unreadCount > 0).length}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
                               ],
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
 
-              // Content
-              Expanded(
-                child: _selectedTabIndex == 0
-                    ? _buildMatchesTab(context, provider)
-                    : _buildChatsTab(context, provider),
-              ),
-            ],
-          );
-        },
+                // Content
+                Expanded(
+                  child: _selectedTabIndex == 0
+                      ? _buildMatchesTab(context, provider)
+                      : _buildChatsTab(context, provider),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -196,13 +411,16 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: const Color(0xFF8B5CF6).withOpacity(0.1),
+              border: Border.all(
+                color: const Color(0xFF8B5CF6).withOpacity(0.3),
+              ),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.person_add_rounded,
               size: 64,
-              color: AppColors.primary,
+              color: Color(0xFF8B5CF6),
             ),
           ),
           const SizedBox(height: 24),
@@ -211,7 +429,7 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
+              color: Colors.white,
             ),
           ),
           const SizedBox(height: 12),
@@ -220,25 +438,44 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
-              color: AppColors.textGray,
+              color: Colors.white.withOpacity(0.6),
             ),
           ),
           const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: () {
-              SmoothNavigation.push(
-                context,
-                const ProfileCreationScreen(),
-              );
-            },
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Create Profile'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+              ),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  SmoothNavigation.push(
+                    context,
+                    const ProfileCreationScreen(),
+                  );
+                },
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add_rounded, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text(
+                        'Create Profile',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -258,14 +495,14 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
             Icon(
               Icons.person_search_rounded,
               size: 64,
-              color: AppColors.textGray.withOpacity(0.5),
+              color: Colors.white.withOpacity(0.2),
             ),
             const SizedBox(height: 16),
             Text(
-              'No matches yet',
+              'No matches found',
               style: TextStyle(
                 fontSize: 16,
-                color: AppColors.textGray,
+                color: Colors.white.withOpacity(0.6),
               ),
             ),
           ],
@@ -275,10 +512,140 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
 
     return Column(
       children: [
-        _buildFilterBar(),
+        // Search bar with glassmorphism
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _onSearchChanged,
+                decoration: InputDecoration(
+                  hintText: 'Search profiles...',
+                  hintStyle: TextStyle(
+                    color: Colors.white.withOpacity(0.6),
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: Colors.white.withOpacity(0.7),
+                  ),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: Colors.white),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {});
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: Colors.white.withOpacity(0.2),
+                      width: 1.5,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: Colors.white.withOpacity(0.2),
+                      width: 1.5,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF8B5CF6),
+                      width: 2,
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.08),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                ),
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          ),
+        ),
+
+        // Sort chips
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              SortChip(
+                label: 'Best Match',
+                isActive: _sortBy == 'Best Match',
+                onTap: () {
+                  setState(() {
+                    _sortBy = 'Best Match';
+                  });
+                },
+              ),
+              const SizedBox(width: 8),
+              SortChip(
+                label: 'Year',
+                isActive: _sortBy == 'Year',
+                onTap: () {
+                  setState(() {
+                    _sortBy = 'Year';
+                  });
+                },
+              ),
+              const SizedBox(width: 8),
+              SortChip(
+                label: 'College',
+                isActive: _sortBy == 'College',
+                onTap: () {
+                  setState(() {
+                    _sortBy = 'College';
+                  });
+                },
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => _showFilterBottomSheet(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.2),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.tune, size: 16, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Filter${_getActiveFilterCount() > 0 ? ' (' + _getActiveFilterCount().toString() + ')' : ''}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Matches list
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             itemCount: filtered.length,
             itemBuilder: (context, index) {
               final match = filtered[index];
@@ -452,20 +819,38 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '$compatibility% match',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '$compatibility% match',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    BookmarkButton(
+                      itemId: match.userId,
+                      type: 'roommate',
+                      itemTitle: match.userName,
+                      itemImage: match.userPhoto,
+                      metadata: {
+                        'email': match.userEmail,
+                        'bio': match.bio,
+                        'compatibility': compatibility,
+                        'college': match.college,
+                        'year': match.courseYear,
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),

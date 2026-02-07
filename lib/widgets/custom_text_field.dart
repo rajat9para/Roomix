@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:roomix/constants/app_colors.dart';
 
-class CustomTextField extends StatelessWidget {
+enum TextFieldStyle { solid, glass }
+
+class CustomTextField extends StatefulWidget {
   final TextEditingController controller;
   final String hintText;
   final String labelText;
@@ -14,6 +17,10 @@ class CustomTextField extends StatelessWidget {
   final VoidCallback? onTap;
   final EdgeInsetsGeometry? margin;
   final EdgeInsetsGeometry? padding;
+  final TextFieldStyle style;
+  final Color? fillColor;
+  final Color? labelColor;
+  final Color? iconColor;
 
   const CustomTextField({
     super.key,
@@ -29,77 +36,191 @@ class CustomTextField extends StatelessWidget {
     this.onTap,
     this.margin,
     this.padding,
+    this.style = TextFieldStyle.solid,
+    this.fillColor,
+    this.labelColor,
+    this.iconColor,
   });
+
+  @override
+  State<CustomTextField> createState() => _CustomTextFieldState();
+}
+
+class _CustomTextFieldState extends State<CustomTextField> {
+  late FocusNode _focusNode;
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleFocusChange() {
+    setState(() {
+      _isFocused = _focusNode.hasFocus;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: margin ?? EdgeInsets.zero,
-      padding: padding ?? EdgeInsets.zero,
-      child: TextFormField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        maxLength: maxLength,
-        onChanged: onChanged,
-        onTap: onTap,
-        style: const TextStyle(
-          color: AppColors.textDark,
-          fontSize: 16,
+      margin: widget.margin ?? EdgeInsets.zero,
+      padding: widget.padding ?? EdgeInsets.zero,
+      child: widget.style == TextFieldStyle.glass
+          ? _buildGlassTextField()
+          : _buildSolidTextField(),
+    );
+  }
+
+  Widget _buildSolidTextField() {
+    return TextFormField(
+      controller: widget.controller,
+      obscureText: widget.obscureText,
+      keyboardType: widget.keyboardType,
+      maxLength: widget.maxLength,
+      onChanged: widget.onChanged,
+      onTap: widget.onTap,
+      focusNode: _focusNode,
+      style: const TextStyle(
+        color: AppColors.textDark,
+        fontSize: 16,
+      ),
+      decoration: InputDecoration(
+        labelText: widget.labelText,
+        hintText: widget.hintText,
+        labelStyle: TextStyle(
+          color: widget.labelColor ?? AppColors.textGray,
+          fontSize: 14,
         ),
-        decoration: InputDecoration(
-          labelText: labelText,
-          hintText: hintText,
-          labelStyle: const TextStyle(
-            color: AppColors.textGray,
-            fontSize: 14,
+        hintStyle: const TextStyle(
+          color: AppColors.textSubtle,
+          fontSize: 14,
+        ),
+        prefixIcon: Icon(
+          widget.icon,
+          color: widget.iconColor ?? AppColors.primary,
+          size: 20,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: AppColors.border,
+            width: 1,
           ),
-          hintStyle: const TextStyle(
-            color: AppColors.textSubtle,
-            fontSize: 14,
-          ),
-          prefixIcon: Icon(
-            icon,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
             color: AppColors.primary,
-            size: 20,
+            width: 2,
           ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: AppColors.border,
-              width: 1,
-            ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: AppColors.primary,
-              width: 2,
-            ),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: AppColors.error,
-              width: 1,
-            ),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: AppColors.error,
-              width: 2,
-            ),
-          ),
-          fillColor: Colors.white,
-          filled: true,
-          counterText: maxLength != null ? null : '',
         ),
-        validator: validator,
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: AppColors.error,
+            width: 1,
+          ),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: AppColors.error,
+            width: 2,
+          ),
+        ),
+        fillColor: widget.fillColor ?? Colors.white,
+        filled: true,
+        counterText: widget.maxLength != null ? null : '',
+      ),
+      validator: widget.validator,
+    );
+  }
+
+  Widget _buildGlassTextField() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: TextFormField(
+          controller: widget.controller,
+          obscureText: widget.obscureText,
+          keyboardType: widget.keyboardType,
+          maxLength: widget.maxLength,
+          onChanged: widget.onChanged,
+          onTap: widget.onTap,
+          focusNode: _focusNode,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+          ),
+          decoration: InputDecoration(
+            labelText: widget.labelText,
+            hintText: widget.hintText,
+            labelStyle: TextStyle(
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 14,
+            ),
+            hintStyle: TextStyle(
+              color: Colors.white.withOpacity(0.5),
+              fontSize: 14,
+            ),
+            prefixIcon: Icon(
+              widget.icon,
+              color: Colors.white.withOpacity(0.7),
+              size: 20,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Colors.white.withOpacity(0.2),
+                width: 1.5,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: const Color(0xFF8B5CF6).withOpacity(0.8),
+                width: 2,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Colors.red.withOpacity(0.6),
+                width: 1.5,
+              ),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Colors.red.withOpacity(0.8),
+                width: 2,
+              ),
+            ),
+            fillColor: Colors.white.withOpacity(0.08),
+            filled: true,
+            counterText: widget.maxLength != null ? null : '',
+          ),
+          validator: widget.validator,
+        ),
       ),
     );
   }
