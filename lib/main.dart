@@ -99,7 +99,7 @@ class RoomixApp extends StatelessWidget {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      fontFamily: 'Manrope',
+      // fontFamily: 'Manrope',
       
       // Color Scheme
       colorScheme: const ColorScheme.light(
@@ -362,7 +362,7 @@ class RoomixApp extends StatelessWidget {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      fontFamily: 'Manrope',
+      // fontFamily: 'Manrope',
       
       colorScheme: const ColorScheme.dark(
         primary: AppColors.primary,
