@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:roomix/constants/app_colors.dart';
 
-enum ButtonStyle { solid, gradient, glass, outlined }
+enum CustomButtonStyle { solid, gradient, glass, outlined }
 
 class CustomButton extends StatefulWidget {
   final VoidCallback? onPressed;
@@ -16,7 +16,8 @@ class CustomButton extends StatefulWidget {
   final EdgeInsetsGeometry? padding;
   final double? fontSize;
   final FontWeight? fontWeight;
-  final ButtonStyle buttonStyle;
+  final CustomButtonStyle buttonStyle;
+  final bool isLoading;
   final Color? gradientStart;
   final Color? gradientEnd;
   final IconData? icon;
@@ -34,7 +35,8 @@ class CustomButton extends StatefulWidget {
     this.padding,
     this.fontSize = 16,
     this.fontWeight = FontWeight.bold,
-    this.buttonStyle = ButtonStyle.solid,
+    this.buttonStyle = CustomButtonStyle.solid,
+    this.isLoading = false,
     this.gradientStart,
     this.gradientEnd,
     this.icon,
@@ -68,17 +70,21 @@ class _CustomButtonState extends State<CustomButton> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final canTap = widget.onPressed != null && !widget.isLoading;
+
     return ScaleTransition(
       scale: _scaleAnimation,
       child: GestureDetector(
         onTapDown: (_) {
-          if (widget.onPressed != null) {
+          if (canTap) {
             _controller.forward();
           }
         },
         onTapUp: (_) {
           _controller.reverse();
-          widget.onPressed?.call();
+          if (canTap) {
+            widget.onPressed?.call();
+          }
         },
         onTapCancel: () {
           _controller.reverse();
@@ -94,24 +100,58 @@ class _CustomButtonState extends State<CustomButton> with SingleTickerProviderSt
 
   Widget _buildButton() {
     switch (widget.buttonStyle) {
-      case ButtonStyle.gradient:
+      case CustomButtonStyle.gradient:
         return _buildGradientButton();
-      case ButtonStyle.glass:
+      case CustomButtonStyle.glass:
         return _buildGlassButton();
-      case ButtonStyle.outlined:
+      case CustomButtonStyle.outlined:
         return _buildOutlinedButton();
-      case ButtonStyle.solid:
+      case CustomButtonStyle.solid:
       default:
         return _buildSolidButton();
     }
   }
 
+  Widget _buildButtonContent({required Color textColor}) {
+    if (widget.isLoading) {
+      return SizedBox(
+        width: 18,
+        height: 18,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(textColor),
+        ),
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (widget.icon != null) ...[
+          Icon(widget.icon, color: textColor),
+          const SizedBox(width: 8),
+        ],
+        Text(
+          widget.text,
+          style: TextStyle(
+            fontSize: widget.fontSize,
+            fontWeight: widget.fontWeight,
+            color: textColor,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSolidButton() {
+    final textColor = widget.textColor ??
+        (widget.color == Colors.white ? AppColors.textDark : Colors.white);
     return ElevatedButton(
-      onPressed: widget.onPressed,
+      onPressed: widget.isLoading ? null : widget.onPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: widget.color,
-        foregroundColor: widget.textColor ?? (widget.color == Colors.white ? AppColors.textDark : Colors.white),
+        foregroundColor: textColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(widget.borderRadius!),
           side: widget.borderColor != null 
@@ -122,23 +162,7 @@ class _CustomButtonState extends State<CustomButton> with SingleTickerProviderSt
         padding: widget.padding ?? const EdgeInsets.symmetric(vertical: 12),
         shadowColor: Colors.transparent,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (widget.icon != null) ...[
-            Icon(widget.icon),
-            const SizedBox(width: 8),
-          ],
-          Text(
-            widget.text,
-            style: TextStyle(
-              fontSize: widget.fontSize,
-              fontWeight: widget.fontWeight,
-            ),
-          ),
-        ],
-      ),
+      child: _buildButtonContent(textColor: textColor),
     );
   }
 
@@ -163,29 +187,12 @@ class _CustomButtonState extends State<CustomButton> with SingleTickerProviderSt
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: widget.onPressed,
+          onTap: widget.isLoading ? null : widget.onPressed,
           borderRadius: BorderRadius.circular(widget.borderRadius!),
           child: Padding(
             padding: widget.padding ?? const EdgeInsets.symmetric(vertical: 12),
             child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (widget.icon != null) ...[
-                    Icon(widget.icon, color: Colors.white),
-                    const SizedBox(width: 8),
-                  ],
-                  Text(
-                    widget.text,
-                    style: TextStyle(
-                      fontSize: widget.fontSize,
-                      fontWeight: widget.fontWeight,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
+              child: _buildButtonContent(textColor: Colors.white),
             ),
           ),
         ),
@@ -216,28 +223,11 @@ class _CustomButtonState extends State<CustomButton> with SingleTickerProviderSt
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: widget.onPressed,
+              onTap: widget.isLoading ? null : widget.onPressed,
               child: Padding(
                 padding: widget.padding ?? const EdgeInsets.symmetric(vertical: 12),
                 child: Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (widget.icon != null) ...[
-                        Icon(widget.icon, color: Colors.white),
-                        const SizedBox(width: 8),
-                      ],
-                      Text(
-                        widget.text,
-                        style: TextStyle(
-                          fontSize: widget.fontSize,
-                          fontWeight: widget.fontWeight,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
+                  child: _buildButtonContent(textColor: Colors.white),
                 ),
               ),
             ),
@@ -259,29 +249,12 @@ class _CustomButtonState extends State<CustomButton> with SingleTickerProviderSt
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: widget.onPressed,
+          onTap: widget.isLoading ? null : widget.onPressed,
           borderRadius: BorderRadius.circular(widget.borderRadius!),
           child: Padding(
             padding: widget.padding ?? const EdgeInsets.symmetric(vertical: 12),
             child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (widget.icon != null) ...[
-                    Icon(widget.icon, color: widget.color),
-                    const SizedBox(width: 8),
-                  ],
-                  Text(
-                    widget.text,
-                    style: TextStyle(
-                      fontSize: widget.fontSize,
-                      fontWeight: widget.fontWeight,
-                      color: widget.color,
-                    ),
-                  ),
-                ],
-              ),
+              child: _buildButtonContent(textColor: widget.color),
             ),
           ),
         ),

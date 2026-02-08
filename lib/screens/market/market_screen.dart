@@ -36,7 +36,6 @@ class _MarketScreenState extends State<MarketScreen> {
   double _selectedMinPrice = 0;
   double _selectedMaxPrice = 50000;
   String? _selectedCondition;
-  String? _selectedCategory;
   String _sortBy = 'newest';
 
   @override
@@ -124,14 +123,11 @@ class _MarketScreenState extends State<MarketScreen> {
     
     // Search filter
     if (_searchController.text.isNotEmpty) {
+      final query = _searchController.text.toLowerCase();
       results = results.where((item) => 
-        item.title.toLowerCase().contains(_searchController.text.toLowerCase())
+        item.title.toLowerCase().contains(query) ||
+        (item.description?.toLowerCase().contains(query) ?? false)
       ).toList();
-    }
-    
-    // Category filter
-    if (_selectedCategory != null) {
-      results = results.where((item) => item.category == _selectedCategory).toList();
     }
     
     // Price filter
@@ -167,7 +163,6 @@ class _MarketScreenState extends State<MarketScreen> {
 
   int _getActiveFilterCount() {
     int count = 0;
-    if (_selectedCategory != null) count++;
     if (_selectedCondition != null) count++;
     if (_selectedMinPrice > _minPrice || _selectedMaxPrice < _maxPrice) count++;
     return count;
@@ -180,47 +175,40 @@ class _MarketScreenState extends State<MarketScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) {
         return FilterBottomSheet(
-          filters: [
-            FilterSection(
-              title: 'Category',
-              type: FilterType.checkbox,
-              options: ['Books', 'Electronics', 'Furniture', 'Clothing', 'Stationery', 'Sports'],
-              selectedValues: _selectedCategory != null ? [_selectedCategory!] : [],
-              onApply: (selected) {
-                setState(() {
-                  _selectedCategory = selected.isNotEmpty ? selected.first : null;
-                });
-              },
-            ),
+          title: 'Filter Items',
+          sections: [
             FilterSection(
               title: 'Condition',
-              type: FilterType.radio,
-              options: ['New', 'Like New', 'Used'],
-              selectedValues: _selectedCondition != null ? [_selectedCondition!] : [],
-              onApply: (selected) {
-                setState(() {
-                  _selectedCondition = selected.isNotEmpty ? selected.first : null;
-                });
-              },
+              type: 'radio',
+              filterKey: 'condition',
+              options: ['Any', 'New', 'Like New', 'Used'],
             ),
             FilterSection(
               title: 'Price Range',
-              type: FilterType.range,
+              type: 'range',
+              filterKey: 'price',
               minValue: _minPrice,
               maxValue: _maxPrice,
-              selectedMin: _selectedMinPrice,
-              selectedMax: _selectedMaxPrice,
-              onApply: (min, max) {
-                setState(() {
-                  _selectedMinPrice = min;
-                  _selectedMaxPrice = max;
-                });
-              },
             ),
           ],
+          initialFilters: {
+            'condition': _selectedCondition ?? 'Any',
+            'price_min': _selectedMinPrice,
+            'price_max': _selectedMaxPrice,
+          },
+          onApply: (filters) {
+            setState(() {
+              final selectedCondition = filters['condition'] as String?;
+              _selectedCondition = (selectedCondition == null || selectedCondition == 'Any')
+                  ? null
+                  : selectedCondition;
+              _selectedMinPrice = (filters['price_min'] as num?)?.toDouble() ?? _minPrice;
+              _selectedMaxPrice = (filters['price_max'] as num?)?.toDouble() ?? _maxPrice;
+            });
+            _applyFilters();
+          },
           onReset: () {
             setState(() {
-              _selectedCategory = null;
               _selectedCondition = null;
               _selectedMinPrice = _minPrice;
               _selectedMaxPrice = _maxPrice;

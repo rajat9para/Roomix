@@ -68,7 +68,9 @@ class _MessScreenState extends State<MessScreen> {
       filtered = filtered
           .where((mess) =>
               mess.name.toLowerCase().contains(searchQuery) ||
-              (mess.description?.toLowerCase().contains(searchQuery) ?? false))
+              (mess.specialization?.toLowerCase().contains(searchQuery) ?? false) ||
+              (mess.menuPreview?.toLowerCase().contains(searchQuery) ?? false) ||
+              (mess.address?.toLowerCase().contains(searchQuery) ?? false))
           .toList();
     }
 
@@ -83,7 +85,7 @@ class _MessScreenState extends State<MessScreen> {
     // Rating filter
     if (_minRating != null) {
       filtered = filtered
-          .where((mess) => (mess.rating ?? 0) >= _minRating!)
+          .where((mess) => mess.rating >= _minRating!)
           .toList();
     }
 
@@ -104,7 +106,7 @@ class _MessScreenState extends State<MessScreen> {
         items.sort((a, b) => b.price.compareTo(a.price));
         break;
       case 'rating':
-        items.sort((a, b) => (b.rating ?? 0).compareTo(a.rating ?? 0));
+        items.sort((a, b) => b.rating.compareTo(a.rating));
         break;
       case 'newest':
       default:
@@ -358,32 +360,41 @@ class _MessScreenState extends State<MessScreen> {
             FilterSection(
               title: 'Price Range',
               type: 'range',
+              filterKey: 'price',
               minValue: _minPrice,
               maxValue: _maxPrice,
             ),
             FilterSection(
               title: 'Rating',
               type: 'radio',
-              options: ['Any', '3★+', '4★+', '4.5★+'],
+              filterKey: 'rating',
+              options: ['Any', '3+ Stars', '4+ Stars', '4.5+ Stars'],
             ),
           ],
           initialFilters: {
-            'min': _selectedMinPrice,
-            'max': _selectedMaxPrice,
+            'price_min': _selectedMinPrice,
+            'price_max': _selectedMaxPrice,
+            'rating': _minRating == null
+                ? 'Any'
+                : _minRating == 3.0
+                    ? '3+ Stars'
+                    : _minRating == 4.0
+                        ? '4+ Stars'
+                        : '4.5+ Stars',
           },
           onApply: (filters) {
             setState(() {
-              _selectedMinPrice = filters['min'] ?? _minPrice;
-              _selectedMaxPrice = filters['max'] ?? _maxPrice;
+              _selectedMinPrice = (filters['price_min'] as num?)?.toDouble() ?? _minPrice;
+              _selectedMaxPrice = (filters['price_max'] as num?)?.toDouble() ?? _maxPrice;
 
-              final ratingString = filters['selected'] as String?;
+              final ratingString = filters['rating'] as String?;
               if (ratingString == 'Any') {
                 _minRating = null;
-              } else if (ratingString == '3★+') {
+              } else if (ratingString == '3+ Stars') {
                 _minRating = 3.0;
-              } else if (ratingString == '4★+') {
+              } else if (ratingString == '4+ Stars') {
                 _minRating = 4.0;
-              } else if (ratingString == '4.5★+') {
+              } else if (ratingString == '4.5+ Stars') {
                 _minRating = 4.5;
               }
             });
@@ -485,10 +496,10 @@ class _MessScreenState extends State<MessScreen> {
           const SizedBox(height: 8),
           Text(
             _errorMessage,
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
               color: Colors.white.withOpacity(0.6),
-              textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(height: 24),

@@ -26,7 +26,6 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
   Timer? _searchDebounceTimer;
   String _filterGender = 'All';
   String _filterYear = 'All';
-  String _filterCollege = '';
   String _sortBy = 'Best Match';
   double _minBudget = 0;
   double _maxBudget = 50000;
@@ -66,8 +65,11 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
     
     // Search filter
     if (_searchController.text.isNotEmpty) {
+      final query = _searchController.text.toLowerCase();
       filtered = filtered.where((m) =>
-        m.name.toLowerCase().contains(_searchController.text.toLowerCase())
+        m.userName.toLowerCase().contains(query) ||
+        m.college.toLowerCase().contains(query) ||
+        m.courseYear.toLowerCase().contains(query)
       ).toList();
     }
     
@@ -83,24 +85,17 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
       filtered = filtered.where((m) => m.courseYear == _filterYear).toList();
     }
     
-    // College filter
-    if (_filterCollege.isNotEmpty) {
-      filtered = filtered
-          .where((m) =>
-              m.college.toLowerCase().contains(_filterCollege.toLowerCase()))
-          .toList();
-    }
-    
     // Budget filter
     filtered = filtered.where((m) => 
-      m.budgetMin >= _selectedMinBudget && m.budgetMax <= _selectedMaxBudget
+      m.preferences.budget.min >= _selectedMinBudget &&
+      m.preferences.budget.max <= _selectedMaxBudget
     ).toList();
 
     // Lifestyle filter
     if (_selectedLifestyle.isNotEmpty) {
       filtered = filtered.where((m) =>
         _selectedLifestyle.every((lifestyle) =>
-          m.lifestyle.contains(lifestyle)
+          m.preferences.lifestyle.contains(lifestyle)
         )
       ).toList();
     }
@@ -129,7 +124,6 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
     int count = 0;
     if (_filterGender != 'All') count++;
     if (_filterYear != 'All') count++;
-    if (_filterCollege.isNotEmpty) count++;
     if (_selectedLifestyle.isNotEmpty) count++;
     if (_selectedMinBudget > _minBudget || _selectedMaxBudget < _maxBudget) count++;
     return count;
@@ -141,61 +135,69 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
+        const lifestyleOptions = {
+          'Early Riser': 'early_riser',
+          'Night Owl': 'night_owl',
+          'Quiet': 'quiet',
+          'Social': 'social',
+          'Clean': 'clean',
+          'Relaxed': 'relaxed',
+        };
+
         return FilterBottomSheet(
-          filters: [
+          title: 'Filter Roommates',
+          sections: [
             FilterSection(
               title: 'Gender',
-              type: FilterType.radio,
-              options: ['All', 'girls', 'boys', 'other'],
-              selectedValues: [_filterGender],
-              onApply: (selected) {
-                setState(() {
-                  _filterGender = selected.isNotEmpty ? selected.first : 'All';
-                });
-              },
+              type: 'radio',
+              filterKey: 'gender',
+              options: ['All', 'boys', 'girls', 'other'],
             ),
             FilterSection(
               title: 'Year',
-              type: FilterType.radio,
-              options: ['All', '1st Year', '2nd Year', '3rd Year', '4th Year'],
-              selectedValues: [_filterYear],
-              onApply: (selected) {
-                setState(() {
-                  _filterYear = selected.isNotEmpty ? selected.first : 'All';
-                });
-              },
+              type: 'radio',
+              filterKey: 'year',
+              options: ['All', '1st Year', '2nd Year', '3rd Year', '4th Year', 'PG / Masters'],
             ),
             FilterSection(
               title: 'Budget',
-              type: FilterType.range,
+              type: 'range',
+              filterKey: 'budget',
               minValue: _minBudget,
               maxValue: _maxBudget,
-              selectedMin: _selectedMinBudget,
-              selectedMax: _selectedMaxBudget,
-              onApply: (min, max) {
-                setState(() {
-                  _selectedMinBudget = min;
-                  _selectedMaxBudget = max;
-                });
-              },
             ),
             FilterSection(
               title: 'Lifestyle',
-              type: FilterType.checkbox,
-              options: ['Non-Smoker', 'Non-Drinker', 'Pet-Friendly', 'Plant Lover'],
-              selectedValues: _selectedLifestyle.toList(),
-              onApply: (selected) {
-                setState(() {
-                  _selectedLifestyle = selected.toSet();
-                });
-              },
+              type: 'checkbox',
+              options: lifestyleOptions.keys.toList(),
             ),
           ],
+          initialFilters: {
+            'gender': _filterGender,
+            'year': _filterYear,
+            'budget_min': _selectedMinBudget,
+            'budget_max': _selectedMaxBudget,
+            for (final entry in lifestyleOptions.entries)
+              if (_selectedLifestyle.contains(entry.value)) entry.key: true,
+          },
+          onApply: (filters) {
+            setState(() {
+              _filterGender = (filters['gender'] as String?) ?? 'All';
+              _filterYear = (filters['year'] as String?) ?? 'All';
+              _selectedMinBudget =
+                  (filters['budget_min'] as num?)?.toDouble() ?? _minBudget;
+              _selectedMaxBudget =
+                  (filters['budget_max'] as num?)?.toDouble() ?? _maxBudget;
+              _selectedLifestyle = lifestyleOptions.entries
+                  .where((entry) => filters[entry.key] == true)
+                  .map((entry) => entry.value)
+                  .toSet();
+            });
+          },
           onReset: () {
             setState(() {
               _filterGender = 'All';
               _filterYear = 'All';
-              _filterCollege = '';
               _selectedLifestyle.clear();
               _selectedMinBudget = _minBudget;
               _selectedMaxBudget = _maxBudget;
@@ -238,15 +240,21 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
                         );
                       }
                     },
-                    child: CircleAvatar(
-                      backgroundColor: Colors.white.withOpacity(0.2),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.3),
-                        width: 1.5,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 1.5,
+                        ),
                       ),
-                      child: Icon(
-                        provider.profileComplete ? Icons.person : Icons.add,
-                        color: Colors.white,
+                      padding: const EdgeInsets.all(2),
+                      child: CircleAvatar(
+                        backgroundColor: Colors.white.withOpacity(0.2),
+                        child: Icon(
+                          provider.profileComplete ? Icons.person : Icons.add,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -657,114 +665,6 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
     );
   }
 
-  List<RoommateProfile> _applyFilters(List<RoommateProfile> matches) {
-    var filtered = matches.toList();
-    if (_filterGender != 'All') {
-      filtered = filtered
-          .where((m) => m.gender.toLowerCase() == _filterGender.toLowerCase())
-          .toList();
-    }
-    if (_filterYear != 'All') {
-      filtered = filtered.where((m) => m.courseYear == _filterYear).toList();
-    }
-    if (_filterCollege.isNotEmpty) {
-      filtered = filtered
-          .where((m) =>
-              m.college.toLowerCase().contains(_filterCollege.toLowerCase()))
-          .toList();
-    }
-
-    switch (_sortBy) {
-      case 'Year':
-        filtered.sort((a, b) => a.courseYear.compareTo(b.courseYear));
-        break;
-      case 'College':
-        filtered.sort((a, b) => a.college.compareTo(b.college));
-        break;
-      case 'Best Match':
-      default:
-        filtered.sort((a, b) => (b.compatibility ?? 0).compareTo(a.compatibility ?? 0));
-        break;
-    }
-    return filtered;
-  }
-
-  Widget _buildFilterBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        border: Border(
-          bottom: BorderSide(color: AppColors.border, width: 1),
-        ),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(child: _buildDropdown(_filterGender, ['All', 'girls', 'boys', 'other'], (v) {
-                setState(() => _filterGender = v);
-              })),
-              const SizedBox(width: 8),
-              Expanded(child: _buildDropdown(_filterYear, ['All', '1st Year', '2nd Year', '3rd Year', '4th Year', 'PG / Masters'], (v) {
-                setState(() => _filterYear = v);
-              })),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Filter by college',
-                    prefixIcon: const Icon(Icons.school_rounded, size: 18),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                  onChanged: (val) => setState(() => _filterCollege = val),
-                ),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 130,
-                child: _buildDropdown(_sortBy, ['Best Match', 'Year', 'College'], (v) {
-                  setState(() => _sortBy = v);
-                }),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDropdown(String value, List<String> options, ValueChanged<String> onChanged) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-          items: options.map((opt) => DropdownMenuItem(value: opt, child: Text(opt))).toList(),
-          onChanged: (val) {
-            if (val != null) onChanged(val);
-          },
-        ),
-      ),
-    );
-  }
-
   Widget _buildMatchCard(
     BuildContext context,
     RoommateProfile match,
@@ -841,7 +741,7 @@ class _RoommateFinderScreenState extends State<RoommateFinderScreen> {
                       itemId: match.userId,
                       type: 'roommate',
                       itemTitle: match.userName,
-                      itemImage: match.userPhoto,
+                      itemImage: null,
                       metadata: {
                         'email': match.userEmail,
                         'bio': match.bio,

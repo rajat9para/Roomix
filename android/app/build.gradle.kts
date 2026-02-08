@@ -1,3 +1,6 @@
+import java.util.Base64
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -8,16 +11,37 @@ plugins {
 }
 
 // Load local.properties for optional configuration
-val localProperties = java.util.Properties()
-val localPropertiesFile = rootProject.file("../android/local.properties")
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
-    localProperties.load(localPropertiesFile.inputStream())
+    localPropertiesFile.reader(Charsets.UTF_8).use { reader ->
+        localProperties.load(reader)
+    }
 }
 
 // Compute MapMyIndia key once at configuration time so it can be used for
 // manifestPlaceholders and also injected into Flutter dart defines.
 val mapmyindiaKey: String = System.getenv("MAPMYINDIA_API_KEY")
     ?: localProperties.getProperty("mapmyindia.api.key", "")
+
+// Encode dart-defines the same way Flutter does (base64 per entry) and merge
+// into any existing definitions that were passed via CLI.
+fun encodeDartDefine(define: String): String =
+    Base64.getEncoder().encodeToString(define.toByteArray(Charsets.UTF_8))
+
+fun mergeDartDefines(existing: String?, extraEncoded: String): String =
+    when {
+        existing.isNullOrBlank() -> extraEncoded
+        existing.split(',').contains(extraEncoded) -> existing
+        else -> "$existing,$extraEncoded"
+    }
+
+if (mapmyindiaKey.isNotEmpty()) {
+    val existingDartDefines = project.findProperty("dart-defines")?.toString()
+    val encodedDefine = encodeDartDefine("MAPMYINDIA_API_KEY=$mapmyindiaKey")
+    project.extensions.extraProperties["dart-defines"] =
+        mergeDartDefines(existingDartDefines, encodedDefine)
+}
 
 // If running a release task, require that a MapMyIndia key is present to avoid
 // shipping builds that will fail at runtime with missing map functionality.
@@ -68,13 +92,4 @@ android {
 
 flutter {
     source = "../.."
-}
-
-// Inject MAPMYINDIA_API_KEY as a compile-time Dart define if available. This makes
-// keys stored in android/local.properties usable without extra CLI steps.
-if (mapmyindiaKey.isNotEmpty()) {
-    flutter {
-        // Kotlin DSL: set extraDartDefines so the Flutter plugin appends them
-        extraDartDefines = listOf("MAPMYINDIA_API_KEY=$mapmyindiaKey")
-    }
 }

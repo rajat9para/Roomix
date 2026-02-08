@@ -7,11 +7,12 @@ enum TextFieldStyle { solid, glass }
 class CustomTextField extends StatefulWidget {
   final TextEditingController controller;
   final String hintText;
-  final String labelText;
+  final String? labelText;
   final IconData icon;
   final bool obscureText;
   final TextInputType keyboardType;
   final int? maxLength;
+  final int? maxLines;
   final String? Function(String?)? validator;
   final ValueChanged<String>? onChanged;
   final VoidCallback? onTap;
@@ -21,16 +22,18 @@ class CustomTextField extends StatefulWidget {
   final Color? fillColor;
   final Color? labelColor;
   final Color? iconColor;
+  final bool enabled;
 
   const CustomTextField({
     super.key,
     required this.controller,
     required this.hintText,
-    required this.labelText,
+    this.labelText,
     required this.icon,
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
     this.maxLength,
+    this.maxLines = 1,
     this.validator,
     this.onChanged,
     this.onTap,
@@ -40,6 +43,7 @@ class CustomTextField extends StatefulWidget {
     this.fillColor,
     this.labelColor,
     this.iconColor,
+    this.enabled = true,
   });
 
   @override
@@ -87,15 +91,17 @@ class _CustomTextFieldState extends State<CustomTextField> {
       obscureText: widget.obscureText,
       keyboardType: widget.keyboardType,
       maxLength: widget.maxLength,
+      maxLines: widget.maxLines,
       onChanged: widget.onChanged,
       onTap: widget.onTap,
       focusNode: _focusNode,
+      enabled: widget.enabled,
       style: const TextStyle(
         color: AppColors.textDark,
         fontSize: 16,
       ),
       decoration: InputDecoration(
-        labelText: widget.labelText,
+        labelText: (widget.labelText?.isNotEmpty ?? false) ? widget.labelText : null,
         hintText: widget.hintText,
         labelStyle: TextStyle(
           color: widget.labelColor ?? AppColors.textGray,
@@ -160,15 +166,17 @@ class _CustomTextFieldState extends State<CustomTextField> {
           obscureText: widget.obscureText,
           keyboardType: widget.keyboardType,
           maxLength: widget.maxLength,
+          maxLines: widget.maxLines,
           onChanged: widget.onChanged,
           onTap: widget.onTap,
           focusNode: _focusNode,
+          enabled: widget.enabled,
           style: const TextStyle(
             color: Colors.white,
             fontSize: 16,
           ),
           decoration: InputDecoration(
-            labelText: widget.labelText,
+            labelText: (widget.labelText?.isNotEmpty ?? false) ? widget.labelText : null,
             hintText: widget.hintText,
             labelStyle: TextStyle(
               color: Colors.white.withOpacity(0.7),

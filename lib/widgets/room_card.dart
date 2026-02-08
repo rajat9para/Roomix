@@ -1,8 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:roomix/models/room_model.dart';
 import 'package:roomix/constants/app_colors.dart';
-import 'package:roomix/widgets/loading_indicator.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:roomix/screens/map/campus_map_screen.dart';
@@ -73,13 +72,15 @@ class RoomCard extends StatelessWidget {
                           fit: BoxFit.cover,
                         ),
                       ),
-                      // Verified badge
                       if (room.verified)
                         Positioned(
                           top: 12,
                           right: 12,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.green.withOpacity(0.8),
                               borderRadius: BorderRadius.circular(20),
@@ -119,173 +120,189 @@ class RoomCard extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title and Price
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        room.title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '₹${room.price.toStringAsFixed(0)}/mo',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-
-                // Location and Type
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on,
-                      size: 16,
-                      color: Colors.white.withOpacity(0.6),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        '${room.location} • ${room.type}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.7),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-
-                // Star Rating Row
-                Row(
-                  children: [
-                    ...List.generate(5, (index) {
-                      return Icon(
-                        index < room.rating.round() ? Icons.star : Icons.star_border,
-                        size: 18,
-                        color: index < room.rating.round() ? Colors.amber : Colors.white.withOpacity(0.3),
-                      );
-                    }),
-                    const SizedBox(width: 8),
-                    Text(
-                      room.rating > 0 ? room.rating.toStringAsFixed(1) : 'New',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: room.rating > 0 ? Colors.amber : Colors.white.withOpacity(0.6),
-                      ),
-                    ),
-                    if (room.reviews.isNotEmpty) ...[
-                      const SizedBox(width: 4),
-                      Text(
-                        '(${room.reviews.length})',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white.withOpacity(0.6),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Amenities
-                if (room.amenities.isNotEmpty)
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: room.amenities.take(3).map((amenity) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF8B5CF6).withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: const Color(0xFF8B5CF6).withOpacity(0.4),
-                          ),
-                        ),
-                        child: Text(
-                          amenity,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF8B5CF6),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                const SizedBox(height: 14),
-
-                // Contact Button
-                SizedBox(
-                  width: double.infinity,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
-                      ),
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: onContactPressed,
-                        borderRadius: BorderRadius.circular(12),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 14),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.call, size: 18, color: Colors.white),
-                              SizedBox(width: 8),
-                              Text(
-                                'Contact Owner',
-                                style: TextStyle(
+                      children: [
+                        // Title and Price
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                room.title,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
                                   color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                'â‚¹${room.price.toStringAsFixed(0)}/mo',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Location and Type
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              size: 16,
+                              color: Colors.white.withOpacity(0.6),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                '${room.location} â€¢ ${room.type}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white.withOpacity(0.7),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Star Rating Row
+                        Row(
+                          children: [
+                            ...List.generate(5, (index) {
+                              return Icon(
+                                index < room.rating.round()
+                                    ? Icons.star
+                                    : Icons.star_border,
+                                size: 18,
+                                color: index < room.rating.round()
+                                    ? Colors.amber
+                                    : Colors.white.withOpacity(0.3),
+                              );
+                            }),
+                            const SizedBox(width: 8),
+                            Text(
+                              room.rating > 0 ? room.rating.toStringAsFixed(1) : 'New',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: room.rating > 0
+                                    ? Colors.amber
+                                    : Colors.white.withOpacity(0.6),
+                              ),
+                            ),
+                            if (room.reviews.isNotEmpty) ...[
+                              const SizedBox(width: 4),
+                              Text(
+                                '(${room.reviews.length})',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white.withOpacity(0.6),
                                 ),
                               ),
                             ],
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Amenities
+                        if (room.amenities.isNotEmpty)
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            children: room.amenities.take(3).map((amenity) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF8B5CF6).withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: const Color(0xFF8B5CF6).withOpacity(0.4),
+                                  ),
+                                ),
+                                child: Text(
+                                  amenity,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF8B5CF6),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        const SizedBox(height: 14),
+
+                        // Contact Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                              ),
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: onContactPressed,
+                                borderRadius: BorderRadius.circular(12),
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 14),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.call, size: 18, color: Colors.white),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Contact Owner',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+
+                        // Map View
+                        if (room.latitude != null && room.longitude != null) ...[
+                          const SizedBox(height: 14),
+                          _buildMapView(context),
+                        ],
+                      ],
                     ),
                   ),
-                ),
-
-                // Map View
-                if (room.latitude != null && room.longitude != null) ...[
-                  const SizedBox(height: 14),
-                  _buildMapView(context),
                 ],
-              ],
+              ),
             ),
           ),
         ),

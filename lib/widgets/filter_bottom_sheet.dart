@@ -34,6 +34,8 @@ class FilterBottomSheet extends StatefulWidget {
 class FilterSection {
   final String title;
   final String type; // 'checkbox', 'range', 'radio', 'custom'
+  /// Optional key to uniquely identify this section in selectedFilters
+  final String? filterKey;
   final List<String>? options;
   final double? minValue, maxValue;
   final Function(dynamic)? onChanged;
@@ -42,6 +44,7 @@ class FilterSection {
   FilterSection({
     required this.title,
     required this.type,
+    this.filterKey,
     this.options,
     this.minValue,
     this.maxValue,
@@ -251,6 +254,19 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     );
   }
 
+  String _radioKey(FilterSection section) => section.filterKey ?? section.title;
+
+  String _rangeMinKey(FilterSection section) =>
+      '${section.filterKey ?? 'range'}_min';
+
+  String _rangeMaxKey(FilterSection section) =>
+      '${section.filterKey ?? 'range'}_max';
+
+  double _asDouble(dynamic value, double fallback) {
+    if (value is num) return value.toDouble();
+    return fallback;
+  }
+
   Widget _buildFilterSection(FilterSection section) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,7 +287,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         else if (section.type == 'range')
           _buildRangeSlider(section)
         else if (section.type == 'radio' && section.options != null)
-          _buildRadioFilters(section.options!)
+          _buildRadioFilters(section)
         else if (section.type == 'custom' && section.customWidget != null)
           section.customWidget!,
         
@@ -348,8 +364,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   Widget _buildRangeSlider(FilterSection section) {
     final minValue = section.minValue ?? 0;
     final maxValue = section.maxValue ?? 100;
-    final currentMin = selectedFilters['min'] ?? minValue;
-    final currentMax = selectedFilters['max'] ?? maxValue;
+    final minKey = _rangeMinKey(section);
+    final maxKey = _rangeMaxKey(section);
+    final currentMin = _asDouble(selectedFilters[minKey], minValue);
+    final currentMax = _asDouble(selectedFilters[maxKey], maxValue);
 
     return Column(
       children: [
@@ -381,8 +399,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           max: maxValue,
           onChanged: (RangeValues values) {
             setState(() {
-              selectedFilters['min'] = values.start;
-              selectedFilters['max'] = values.end;
+              selectedFilters[minKey] = values.start;
+              selectedFilters[maxKey] = values.end;
             });
           },
           activeColor: const Color(0xFF8B5CF6),
@@ -392,14 +410,16 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     );
   }
 
-  Widget _buildRadioFilters(List<String> options) {
+  Widget _buildRadioFilters(FilterSection section) {
+    final options = section.options ?? const <String>[];
+    final key = _radioKey(section);
     return Column(
       children: options.map((option) {
-        final isSelected = selectedFilters['selected'] == option;
+        final isSelected = selectedFilters[key] == option;
         return GestureDetector(
           onTap: () {
             setState(() {
-              selectedFilters['selected'] = option;
+              selectedFilters[key] = option;
             });
           },
           child: Container(

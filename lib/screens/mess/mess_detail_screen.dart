@@ -145,8 +145,8 @@ class _MessDetailScreenState extends State<MessDetailScreen> {
                         itemPrice: _currentMess.price,
                         rating: _currentMess.rating,
                         metadata: {
-                          'description': _currentMess.description ?? '',
-                          'location': _currentMess.location ?? '',
+                          'description': _currentMess.specialization ?? _currentMess.menuPreview ?? '',
+                          'location': _currentMess.address ?? '',
                           'contact': _currentMess.contact ?? '',
                         },
                       ),

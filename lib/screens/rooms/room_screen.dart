@@ -26,13 +26,13 @@ class _RoomScreenState extends State<RoomScreen> {
   String _errorMessage = '';
   
   // Search and Filter state
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   String _selectedSort = 'newest'; // newest, price_low, price_high, rating, distance
   Timer? _searchDebounce;
   
   // Filter options
-  Set<String> _selectedCategories = {'Single Room', 'Double Room', 'Triple Room', 'PG', 'Hostel'};
-  Set<String> _selectedAmenities = {'WiFi', 'AC', 'Attached Bathroom', 'Parking', 'Meals'};
+  Set<String> _selectedCategories = {};
+  Set<String> _selectedAmenities = {};
   double _minPrice = 0;
   double _maxPrice = 50000;
   double _selectedMinPrice = 0;
@@ -73,7 +73,7 @@ class _RoomScreenState extends State<RoomScreen> {
       
       // Calculate price range from fetched rooms
       if (_allRooms.isNotEmpty) {
-        final prices = _allRooms.map((r) => r.price?.toDouble() ?? 0).toList();
+        final prices = _allRooms.map((r) => r.price).toList();
         _minPrice = prices.reduce((a, b) => a < b ? a : b);
         _maxPrice = prices.reduce((a, b) => a > b ? a : b);
         _selectedMaxPrice = _maxPrice;
@@ -97,21 +97,28 @@ class _RoomScreenState extends State<RoomScreen> {
     if (searchQuery.isNotEmpty) {
       filtered = filtered
           .where((room) =>
-              room.title?.toLowerCase().contains(searchQuery) ?? false ||
-              room.description?.toLowerCase().contains(searchQuery) ?? false ||
-              room.address?.toLowerCase().contains(searchQuery) ?? false)
+              room.title.toLowerCase().contains(searchQuery) ||
+              room.location.toLowerCase().contains(searchQuery) ||
+              room.type.toLowerCase().contains(searchQuery) ||
+              room.amenities.any((a) => a.toLowerCase().contains(searchQuery)))
           .toList();
     }
 
     // Category filter
-    filtered = filtered
-        .where((room) => _selectedCategories.contains(room.category))
-        .toList();
+    if (_selectedCategories.isNotEmpty) {
+      filtered = filtered.where((room) {
+        final roomType = room.type.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '');
+        return _selectedCategories.any((category) {
+          final cat = category.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '');
+          return roomType.contains(cat) || cat.contains(roomType);
+        });
+      }).toList();
+    }
 
     // Price range filter
     filtered = filtered
         .where((room) {
-          final roomPrice = room.price?.toDouble() ?? 0;
+          final roomPrice = room.price;
           return roomPrice >= _selectedMinPrice && roomPrice <= _selectedMaxPrice;
         })
         .toList();
@@ -120,23 +127,26 @@ class _RoomScreenState extends State<RoomScreen> {
     if (_selectedAmenities.isNotEmpty) {
       filtered = filtered
           .where((room) {
-            final roomAmenities = room.amenities ?? [];
-            return _selectedAmenities
-                .every((amenity) => roomAmenities.contains(amenity));
+            final roomAmenities = room.amenities
+                .map((a) => a.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), ''))
+                .toSet();
+            return _selectedAmenities.every((amenity) {
+              final key = amenity.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '');
+              return roomAmenities.contains(key);
+            });
           })
           .toList();
     }
 
     // Verified only filter
     if (_verifiedOnly) {
-      filtered =
-          filtered.where((room) => room.isVerified ?? false).toList();
+      filtered = filtered.where((room) => room.verified).toList();
     }
 
     // Rating filter
     if (_minRating != null) {
       filtered = filtered
-          .where((room) => (room.rating ?? 0) >= _minRating!)
+          .where((room) => room.rating >= _minRating!)
           .toList();
     }
 
@@ -151,13 +161,13 @@ class _RoomScreenState extends State<RoomScreen> {
   void _applySorting(List<RoomModel> rooms) {
     switch (_selectedSort) {
       case 'price_low':
-        rooms.sort((a, b) => (a.price ?? 0).compareTo(b.price ?? 0));
+        rooms.sort((a, b) => a.price.compareTo(b.price));
         break;
       case 'price_high':
-        rooms.sort((a, b) => (b.price ?? 0).compareTo(a.price ?? 0));
+        rooms.sort((a, b) => b.price.compareTo(a.price));
         break;
       case 'rating':
-        rooms.sort((a, b) => (b.rating ?? 0).compareTo(a.rating ?? 0));
+        rooms.sort((a, b) => b.rating.compareTo(a.rating));
         break;
       case 'newest':
       default:
@@ -194,6 +204,7 @@ class _RoomScreenState extends State<RoomScreen> {
             FilterSection(
               title: 'Price Range',
               type: 'range',
+              filterKey: 'price',
               minValue: _minPrice,
               maxValue: _maxPrice,
             ),
@@ -205,16 +216,22 @@ class _RoomScreenState extends State<RoomScreen> {
             FilterSection(
               title: 'Rating',
               type: 'radio',
-              options: ['Any', '3★+', '4★+', '4.5★+'],
+              filterKey: 'rating',
+              options: ['Any', '3+ Stars', '4+ Stars', '4.5+ Stars'],
             ),
           ],
           initialFilters: {
-            ..._selectedCategories.asMap().entries.fold<Map<String, dynamic>>(
-                {}, (acc, entry) => {...acc, entry.value: true}),
-            'min': _selectedMinPrice,
-            'max': _selectedMaxPrice,
-            ..._selectedAmenities.asMap().entries.fold<Map<String, dynamic>>(
-                {}, (acc, entry) => {...acc, entry.value: true}),
+            for (final c in _selectedCategories) c: true,
+            'price_min': _selectedMinPrice,
+            'price_max': _selectedMaxPrice,
+            for (final a in _selectedAmenities) a: true,
+            'rating': _minRating == null
+                ? 'Any'
+                : _minRating == 3.0
+                    ? '3+ Stars'
+                    : _minRating == 4.0
+                        ? '4+ Stars'
+                        : '4.5+ Stars',
           },
           onApply: (filters) {
             setState(() {
@@ -225,8 +242,8 @@ class _RoomScreenState extends State<RoomScreen> {
                       e.value == true)
                   .map((e) => e.key as String)
                   .toSet();
-              _selectedMinPrice = filters['min'] ?? _minPrice;
-              _selectedMaxPrice = filters['max'] ?? _maxPrice;
+              _selectedMinPrice = (filters['price_min'] as num?)?.toDouble() ?? _minPrice;
+              _selectedMaxPrice = (filters['price_max'] as num?)?.toDouble() ?? _maxPrice;
               _selectedAmenities = filters.entries
                   .where((e) =>
                       ['WiFi', 'AC', 'Attached Bathroom', 'Parking', 'Meals']
@@ -235,14 +252,14 @@ class _RoomScreenState extends State<RoomScreen> {
                   .map((e) => e.key as String)
                   .toSet();
 
-              final ratingString = filters['selected'] as String?;
+              final ratingString = filters['rating'] as String?;
               if (ratingString == 'Any') {
                 _minRating = null;
-              } else if (ratingString == '3★+') {
+              } else if (ratingString == '3+ Stars') {
                 _minRating = 3.0;
-              } else if (ratingString == '4★+') {
+              } else if (ratingString == '4+ Stars') {
                 _minRating = 4.0;
-              } else if (ratingString == '4.5★+') {
+              } else if (ratingString == '4.5+ Stars') {
                 _minRating = 4.5;
               }
             });
@@ -250,8 +267,8 @@ class _RoomScreenState extends State<RoomScreen> {
           },
           onReset: () {
             setState(() {
-              _selectedCategories = {'Single Room', 'Double Room', 'Triple Room', 'PG', 'Hostel'};
-              _selectedAmenities = {'WiFi', 'AC', 'Attached Bathroom', 'Parking', 'Meals'};
+              _selectedCategories.clear();
+              _selectedAmenities.clear();
               _selectedMinPrice = _minPrice;
               _selectedMaxPrice = _maxPrice;
               _minRating = null;
@@ -266,7 +283,7 @@ class _RoomScreenState extends State<RoomScreen> {
 
   int get _activeFilterCount {
     int count = 0;
-    if (_selectedCategories.length < 5) count++;
+    if (_selectedCategories.isNotEmpty) count++;
     if (_selectedMinPrice > _minPrice || _selectedMaxPrice < _maxPrice) count++;
     if (_selectedAmenities.isNotEmpty) count++;
     if (_minRating != null) count++;
@@ -518,10 +535,10 @@ class _RoomScreenState extends State<RoomScreen> {
           const SizedBox(height: 8),
           Text(
             _errorMessage,
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
               color: Colors.white.withOpacity(0.6),
-              textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(height: 24),

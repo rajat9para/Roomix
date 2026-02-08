@@ -17,7 +17,8 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _nameController = TextEditingController();
-  final _bioController = TextEditingController();
+  final _courseController = TextEditingController();
+  final _yearController = TextEditingController();
   final _collegeController = TextEditingController();
   final _phoneController = TextEditingController();
   File? _imageFile;
@@ -30,15 +31,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final auth = context.read<AuthProvider>();
     final user = auth.currentUser;
     _nameController.text = user?.name ?? '';
-    _bioController.text = user?.bio ?? '';
-    _collegeController.text = user?.college ?? '';
-    _phoneController.text = user?.phone ?? '';
+    _courseController.text = user?.course ?? '';
+    _yearController.text = user?.year ?? '';
+    _collegeController.text = user?.collegeName ?? '';
+    _phoneController.text = user?.contactNumber ?? '';
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _bioController.dispose();
+    _courseController.dispose();
+    _yearController.dispose();
     _collegeController.dispose();
     _phoneController.dispose();
     super.dispose();
@@ -94,9 +97,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       await auth.updateProfile({
         'name': _nameController.text.trim(),
-        'bio': _bioController.text.trim(),
-        'college': _collegeController.text.trim(),
-        'phone': _phoneController.text.trim(),
+        'course': _courseController.text.trim(),
+        'year': _yearController.text.trim(),
+        'collegeName': _collegeController.text.trim(),
+        'contactNumber': _phoneController.text.trim(),
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -236,7 +240,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: CustomButton(
                     text: 'Update Picture',
                     onPressed: _isLoading ? null : _uploadImage,
-                    style: ButtonStyle.gradient,
+                    buttonStyle: CustomButtonStyle.gradient,
                     isLoading: _isLoading,
                   ),
                 ),
@@ -264,9 +268,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const SizedBox(height: 8),
                           CustomTextField(
                             controller: _nameController,
+                            labelText: '',
                             hintText: 'Enter your full name',
-                            prefixIcon: Icons.person,
-                            style: CustomTextFieldStyle.glass,
+                            icon: Icons.person,
+                            style: TextFieldStyle.glass,
                             enabled: !_isLoading,
                           ),
                         ],
@@ -290,9 +295,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const SizedBox(height: 8),
                           CustomTextField(
                             controller: TextEditingController(text: user?.email ?? ''),
+                            labelText: '',
                             hintText: 'Your email',
-                            prefixIcon: Icons.email,
-                            style: CustomTextFieldStyle.glass,
+                            icon: Icons.email,
+                            style: TextFieldStyle.glass,
                             enabled: false,
                           ),
                         ],
@@ -316,9 +322,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const SizedBox(height: 8),
                           CustomTextField(
                             controller: _phoneController,
+                            labelText: '',
                             hintText: 'Enter your phone number',
-                            prefixIcon: Icons.phone,
-                            style: CustomTextFieldStyle.glass,
+                            icon: Icons.phone,
+                            style: TextFieldStyle.glass,
                             enabled: !_isLoading,
                             keyboardType: TextInputType.phone,
                           ),
@@ -343,23 +350,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const SizedBox(height: 8),
                           CustomTextField(
                             controller: _collegeController,
+                            labelText: '',
                             hintText: 'Your college name',
-                            prefixIcon: Icons.school,
-                            style: CustomTextFieldStyle.glass,
+                            icon: Icons.school,
+                            style: TextFieldStyle.glass,
                             enabled: !_isLoading,
                           ),
                         ],
                       ),
                     ),
 
-                    // Bio Field
+                    // Course Field
                     Padding(
                       padding: const EdgeInsets.only(bottom: 24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Bio',
+                            'Course',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -368,11 +376,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(height: 8),
                           CustomTextField(
-                            controller: _bioController,
-                            hintText: 'Tell us about yourself...',
-                            prefixIcon: Icons.info,
-                            maxLines: 4,
-                            style: CustomTextFieldStyle.glass,
+                            controller: _courseController,
+                            labelText: '',
+                            hintText: 'Your course name',
+                            icon: Icons.book,
+                            style: TextFieldStyle.glass,
+                            enabled: !_isLoading,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Year Field
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Year',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white.withOpacity(0.7),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          CustomTextField(
+                            controller: _yearController,
+                            labelText: '',
+                            hintText: 'e.g. 1st Year',
+                            icon: Icons.school,
+                            style: TextFieldStyle.glass,
                             enabled: !_isLoading,
                           ),
                         ],
@@ -385,7 +420,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: CustomButton(
                         text: 'Save Changes',
                         onPressed: _isLoading ? null : _saveProfile,
-                        style: ButtonStyle.gradient,
+                        buttonStyle: CustomButtonStyle.gradient,
                         isLoading: _isLoading,
                       ),
                     ),

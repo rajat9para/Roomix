@@ -239,15 +239,19 @@ class _EventsScreenState extends State<EventsScreen> {
                         },
                       ),
                     ],
-                  children: [
-                    const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
-                    const SizedBox(width: 8),
-                    Text(
-                      DateFormat('MMM dd, yyyy').format(event.eventDate),
-                      style: const TextStyle(fontSize: 14, color: AppColors.textGray),
-                    ),
-                  ],
-                ),
+                  ),
+
+                  // Date
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        DateFormat('MMM dd, yyyy').format(event.eventDate),
+                        style: const TextStyle(fontSize: 14, color: AppColors.textGray),
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 8),
                 
                 // Location

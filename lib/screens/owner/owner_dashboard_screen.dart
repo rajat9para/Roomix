@@ -601,100 +601,115 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> with Single
       ),
     );
   }
-}
 
-+  void _showReviewsDialog(BuildContext context) {
-+    final listings = Provider.of<OwnerListingsProvider>(context, listen: false);
-+    
-+    // Aggregate all reviews from rooms and mess
-+    List<Map<String, dynamic>> allReviews = [];
-+    
-+    // Add room reviews
-+    for (var room in listings.rooms) {
-+      if (room['reviews'] != null && room['reviews'] is List) {
-+        for (var review in room['reviews'] as List) {
-+          allReviews.add({
-+            ...review as Map<String, dynamic>,
-+            'source': 'Room: ${room['title'] ?? "Room"}',
-+            'sourceId': room['_id'] ?? room['id'] ?? '',
-+          });
-+        }
-+      }
-+    }
-+    
-+    // Add mess reviews
-+    for (var mess in listings.mess) {
-+      if (mess != null && mess is Map) {
-+        if (mess['reviews'] != null && mess['reviews'] is List) {
-+          for (var review in mess['reviews'] as List) {
-+            allReviews.add({
-+              ...review as Map<String, dynamic>,
-+              'source': 'Mess: ${mess['name'] ?? mess['title'] ?? "Mess"}',
-+              'sourceId': mess['_id'] ?? mess['id'] ?? '',
-+            });
-+          }
-+        }
-+      }
-+    }
-+    
-+    showDialog(
-+      context: context,
-+      builder: (ctx) => AlertDialog(
-+        title: const Text('Reviews & Ratings'),
-+        content: allReviews.isEmpty
-+            ? const Text('No reviews yet. Customers can leave reviews on your listings.')
-+            : SizedBox(
-+                width: double.maxFinite,
-+                child: ListView.separated(
-+                  itemCount: allReviews.length,
-+                  separatorBuilder: (_, __) => const Divider(),
-+                  itemBuilder: (_, index) {
-+                    final review = allReviews[index];
-+                    final rating = review['rating'] ?? 0;
-+                    final comment = review['comment'] ?? '';
-+                    final user = review['userId'] ?? 'Anonymous';
-+                    final timestamp = review['createdAt'] ?? '';
-+                    
-+                    return Padding(
-+                      padding: const EdgeInsets.symmetric(vertical: 8),
-+                      child: Column(
-+                        crossAxisAlignment: CrossAxisAlignment.start,
-+                        children: [
-+                          Row(
-+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-+                            children: [
-+                              Text(review['source'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-+                              Row(
-+                                children: List.generate(
-+                                  5,
-+                                  (i) => Icon(
-+                                    i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
-+                                    color: Colors.amber,
-+                                    size: 16,
-+                                  ),
-+                                ),
-+                              ),
-+                            ],
-+                          ),
-+                          const SizedBox(height: 4),
-+                          Text(user, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-+                          if (comment.isNotEmpty) ...[
-+                            const SizedBox(height: 4),
-+                            Text(comment, style: const TextStyle(fontSize: 12)),
-+                          ],
-+                        ],
-+                      ),
-+                    );
-+                  },
-+                ),
-+              ),
-+        actions: [
-+          TextButton(
-+            onPressed: () => Navigator.pop(ctx),
-+            child: const Text('Close'),
-+          ),
-+        ],
-+      ),
-+    );
-+  }
-+}
+  void _showReviewsDialog(BuildContext context) {
+    final listings = Provider.of<OwnerListingsProvider>(context, listen: false);
+
+    // Aggregate all reviews from rooms and mess
+    final allReviews = <Map<String, dynamic>>[];
+
+    // Add room reviews
+    for (final room in listings.rooms) {
+      if (room['reviews'] != null && room['reviews'] is List) {
+        for (final review in room['reviews'] as List) {
+          allReviews.add({
+            ...review as Map<String, dynamic>,
+            'source': 'Room: ${room['title'] ?? "Room"}',
+            'sourceId': room['_id'] ?? room['id'] ?? '',
+          });
+        }
+      }
+    }
+
+    // Add mess reviews
+    for (final mess in listings.mess) {
+      if (mess != null && mess is Map) {
+        if (mess['reviews'] != null && mess['reviews'] is List) {
+          for (final review in mess['reviews'] as List) {
+            allReviews.add({
+              ...review as Map<String, dynamic>,
+              'source': 'Mess: ${mess['name'] ?? mess['title'] ?? "Mess"}',
+              'sourceId': mess['_id'] ?? mess['id'] ?? '',
+            });
+          }
+        }
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reviews & Ratings'),
+        content: allReviews.isEmpty
+            ? const Text('No reviews yet. Customers can leave reviews on your listings.')
+            : SizedBox(
+                width: double.maxFinite,
+                child: ListView.separated(
+                  itemCount: allReviews.length,
+                  separatorBuilder: (_, __) => const Divider(),
+                  itemBuilder: (_, index) {
+                    final review = allReviews[index];
+                    final rating = review['rating'] ?? 0;
+                    final comment = review['comment'] ?? '';
+                    final user = review['userId'] ?? 'Anonymous';
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                review['source'] ?? '',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Row(
+                                children: List.generate(
+                                  5,
+                                  (i) => Icon(
+                                    i < rating
+                                        ? Icons.star_rounded
+                                        : Icons.star_outline_rounded,
+                                    color: Colors.amber,
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            user,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          if (comment.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              comment,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -115,28 +115,39 @@ class _UtilitiesScreenState extends State<UtilitiesScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) {
         return FilterBottomSheet(
-          filters: [
+          title: 'Filter Utilities',
+          sections: [
             FilterSection(
               title: 'Rating',
-              type: FilterType.radio,
-              options: ['3★+', '4★+', '4.5★+'],
-              selectedValues: _minRating != null ? [_minRating.toString()] : [],
-              onApply: (selected) {
-                setState(() {
-                  if (selected.isEmpty) {
-                    _minRating = null;
-                  } else if (selected.first == '3.0') {
-                    _minRating = 3.0;
-                  } else if (selected.first == '4.0') {
-                    _minRating = 4.0;
-                  } else if (selected.first == '4.5') {
-                    _minRating = 4.5;
-                  }
-                });
-                _applyFilters();
-              },
+              type: 'radio',
+              filterKey: 'rating',
+              options: ['Any', '3+ Stars', '4+ Stars', '4.5+ Stars'],
             ),
           ],
+          initialFilters: {
+            'rating': _minRating == null
+                ? 'Any'
+                : _minRating == 3.0
+                    ? '3+ Stars'
+                    : _minRating == 4.0
+                        ? '4+ Stars'
+                        : '4.5+ Stars',
+          },
+          onApply: (filters) {
+            setState(() {
+              final ratingString = filters['rating'] as String?;
+              if (ratingString == null || ratingString == 'Any') {
+                _minRating = null;
+              } else if (ratingString == '3+ Stars') {
+                _minRating = 3.0;
+              } else if (ratingString == '4+ Stars') {
+                _minRating = 4.0;
+              } else if (ratingString == '4.5+ Stars') {
+                _minRating = 4.5;
+              }
+            });
+            _applyFilters();
+          },
           onReset: () {
             setState(() {
               _minRating = null;

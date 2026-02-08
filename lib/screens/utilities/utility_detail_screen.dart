@@ -137,7 +137,7 @@ class _UtilityDetailScreenState extends State<UtilityDetailScreen> {
                   rating: utility.rating,
                   metadata: {
                     'category': utility.category,
-                    'location': utility.location ?? '',
+                    'location': utility.address ?? '',
                     'verified': utility.verified,
                   },
                 ),

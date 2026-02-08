@@ -139,7 +139,7 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                         itemPrice: _currentRoom.price,
                         rating: _currentRoom.rating,
                         metadata: {
-                          'description': _currentRoom.description,
+                          'description': _currentRoom.location,
                           'location': _currentRoom.location,
                           'contact': _currentRoom.contact,
                         },
